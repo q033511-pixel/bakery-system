@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-surface-50 font-sans text-stone-900 antialiased;
+  }
+  /* أرقام جدولية للأموال والكميات (بند 122) */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+  input[type='date'] {
+    position: relative;
+  }
+  input[type='date']::-webkit-calendar-picker-indicator {
+    position: absolute;
+    inset-inline-start: 4px;
+    opacity: 0.55;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.stone.300') transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-stone-300;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
