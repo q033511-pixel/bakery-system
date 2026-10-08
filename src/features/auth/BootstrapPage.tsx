@@ -1,4 +1,4 @@
-/** تهيئة النظام وأول مالك (بند 68) — تتطلب: تسجيل دخول + رمز تهيئة من قاعدة البيانات */
+/** تهيئة النظام وأول مالك (بند 68) — الوضع المحلي: الجهاز شخص واحد والبيانات عليه */
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { BakeryLogo } from './BakeryLogo'
@@ -9,7 +9,6 @@ import { loadAuthState } from '@/app/authStore'
 export default function BootstrapPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [setupCode, setSetupCode] = useState('')
   const [businessName, setBusinessName] = useState('')
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
@@ -23,7 +22,7 @@ export default function BootstrapPage() {
     setBusy(true)
     try {
       await signIn(email.trim(), password)
-      await bootstrapBusiness(setupCode.trim(), businessName.trim(), fullName.trim() || null, phone.trim() || null)
+      await bootstrapBusiness('LOCAL', businessName.trim(), fullName.trim() || null, phone.trim() || null)
       await loadAuthState()
       navigate('/')
     } catch (err) {
@@ -40,7 +39,8 @@ export default function BootstrapPage() {
           <BakeryLogo className="size-16" />
           <h1 className="text-xl font-extrabold text-stone-900">تهيئة النظام — الخطوة الأولى</h1>
           <p className="max-w-sm text-xs leading-relaxed text-stone-500">
-            أنشئ حسابك أولاً من شاشة الدخول («إنشاء حساب جديد»)، سجّل الدخول، ثم أكمل التهيئة هنا برمز التهيئة.
+            سجّل الدخول بحسابك (يُنشأ تلقائياً عند أول دخول)، ثم اكتب اسم مخبزك واضغط «إنشاء النظام» —
+            كل البيانات تُخزّن على هذا الجهاز فقط.
           </p>
         </div>
 
@@ -51,9 +51,6 @@ export default function BootstrapPage() {
             </Field>
             <Field label="كلمة المرور" required>
               <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required dir="ltr" className="text-left" />
-            </Field>
-            <Field label="رمز التهيئة" required hint="يُستخرج من SQL Editor في Supabase: select setup_code from system_setup;">
-              <Input value={setupCode} onChange={(e) => setSetupCode(e.target.value)} required dir="ltr" className="text-left font-mono" placeholder="BAKERY-SETUP-XXXXXXXX" />
             </Field>
             <Field label="اسم المخبز / النشاط" required>
               <Input value={businessName} onChange={(e) => setBusinessName(e.target.value)} required placeholder="مثال: مخبز النور" />
@@ -84,7 +81,7 @@ export default function BootstrapPage() {
           <ul className="mt-2 list-inside list-disc space-y-1 text-2xs leading-relaxed text-info-900">
             <li>تنشئ النشاط التجاري وترقّي حسابك إلى المالك (OWNER) — التهيئة تعمل مرة واحدة فقط.</li>
             <li>تنشئ الوحدات الافتراضية (كغ، ربطة، كيس...) والتحويلات، والمستودعين، والصندوق الرئيسي، وفئات المصروفات.</li>
-            <li>لا يمكن لأي شخص آخر أن يصبح مالكاً بمجرد التسجيل — الحماية داخل قاعدة البيانات.</li>
+            <li>الوضع المحلي: كل بياناتك تُخزّن على هذا الجهاز فقط وتعمل بلا إنترنت.</li>
           </ul>
         </Card>
       </div>

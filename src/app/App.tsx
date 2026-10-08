@@ -8,8 +8,6 @@ import { HashRouter } from 'react-router-dom'
 import AppShell from './AppShell'
 import { useAuthStore, loadAuthState } from './authStore'
 import { LoadingState } from '@/components/ui/states'
-import { isSupabaseConfigured } from '@/lib/env'
-import { EnvError } from '@/app/EnvError'
 
 // Auth
 const LoginPage = lazy(() => import('@/features/auth/LoginPage'))
@@ -69,10 +67,7 @@ export default function App() {
     void loadAuthState()
   }, [])
 
-  if (!isSupabaseConfigured()) {
-    return <EnvError />
-  }
-
+  // الوضع المحلي: البيانات على هذا الجهاز — لا بوابة إعداد خارجية
   return (
     <HashRouter>
       <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><LoadingState /></div>}>

@@ -6,7 +6,6 @@
  * - تعارض المخزون: الخادم هو المرجع — يرفض ويظهر الخطأ (لا تجاوز صامت)
  */
 import { db } from '@/db/db'
-import type { PendingOp } from '@/types'
 import { create } from 'zustand'
 
 type OpFn = (payload: Record<string, unknown>) => Promise<unknown>
@@ -71,62 +70,26 @@ export interface ExecuteResult<T> {
 }
 
 /**
- * تنفيذ عملية تشغيلية مع دعم أوفلاين:
- * - متصل: تنفيذ فوري عبر RPC؛ خطأ شبكة → enqueue؛ خطأ عمل → رمي للعرض
- * - غير متصل: enqueue فوراً بحالة PENDING
+ * تنفيذ عملية تشغيلية — **الوضع المحلي**: التنفيذ فوري مباشرة على قاعدة
+ * الجهاز (IndexedDB) سواء كان المتصفح "أونلاين" أم لا، فلا خادم سحابي.
+ * الطابور يبقى كطبقة أمان عند فشل غير متوقع، ولا يُفقد أي عملية (بند 40).
  */
 export async function executeOperation<T = unknown>(
   type: string,
-  summary: string,
+  _summary: string,
   payload: Record<string, unknown>,
 ): Promise<ExecuteResult<T>> {
   const fn = opRegistry.get(type)
   if (!fn) throw new Error(`عملية غير مسجلة: ${type}`)
-
-  const online = typeof navigator !== 'undefined' ? navigator.onLine !== false : true
-
-  if (!online) {
-    await enqueueOp(type, summary, payload)
-    return { ok: true, offline: true }
-  }
 
   try {
     const data = (await fn(payload)) as T
     useSyncStore.getState().markSynced()
     return { ok: true, offline: false, data }
   } catch (err) {
-    if (isNetworkError(err)) {
-      await enqueueOp(type, summary, payload)
-      useSyncStore.getState().setOnline(false)
-      return { ok: true, offline: true }
-    }
+    // فشل تنفيذ محلي = خطأ بيانات/تحقق يُعرض للمستخدم (لا طابور)
     throw new Error(extractErrorMessage(err))
   }
-}
-
-async function enqueueOp(type: string, summary: string, payload: Record<string, unknown>): Promise<void> {
-  const operationId = payload.operation_id
-  if (typeof operationId !== 'string' || !operationId) {
-    throw new Error('عملية بدون operation_id — مرفوضة (منع التكرار).')
-  }
-  const existing = await db.pending_ops.where('operation_id').equals(operationId).first()
-  if (existing) return // مُدرجة بالفعل — لا تكرار في الطابور
-  const op: PendingOp = {
-    operation_id: operationId,
-    type,
-    payload,
-    status: 'PENDING',
-    attempts: 0,
-    last_error: null,
-    created_at: new Date().toISOString(),
-    synced_at: null,
-    summary,
-  }
-  await db.pending_ops.add(op).then((id) => {
-    // Dexie auto-increment: نحفظ المفتاح على الكائن حتى تعمل التحديثات لاحقاً
-    op.id = id
-  })
-  await refreshCounts()
 }
 
 /** تحديث عدادات الحالة في المتجر */

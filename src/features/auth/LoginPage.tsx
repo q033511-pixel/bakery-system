@@ -29,8 +29,13 @@ export default function LoginPage() {
     try {
       if (mode === 'signin') {
         await signIn(email.trim(), password)
-        await loadAuthState()
-        navigate('/', replace_or_root())
+        const profile = await loadAuthState()
+        // الوضع المحلي: حساب بلا نشاط بعد → ذهاب مباشر لخطوة التهيئة
+        if (profile && (profile.role === 'PENDING' || !profile.business_id)) {
+          navigate('/bootstrap', { replace: true })
+        } else {
+          navigate('/', replace_or_root())
+        }
       } else if (mode === 'signup') {
         const res = await signUp(email.trim(), password, fullName.trim())
         if (res.needsEmailConfirm) {
