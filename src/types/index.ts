@@ -64,6 +64,8 @@ export interface Business {
   timezone: string
   allow_negative_stock: boolean
   invoice_prefix: string
+  phone?: string | null
+  address?: string | null
   created_at: string
 }
 

@@ -21,6 +21,7 @@ export default {
       },
       boxShadow: {
         card: '0 1px 2px 0 rgb(28 25 23 / 0.06), 0 1px 3px 0 rgb(28 25 23 / 0.08)',
+        'card-lg': '0 4px 6px -1px rgb(28 25 23 / 0.07), 0 10px 24px -4px rgb(28 25 23 / 0.12)',
         fab: '0 4px 12px rgb(28 25 23 / 0.25)',
       },
     },

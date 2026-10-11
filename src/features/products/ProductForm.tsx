@@ -1,9 +1,10 @@
-/** تعديل صنف — كامل الحقول (بند 9/10) */
+/** إضافة/تعديل صنف — كامل الحقول (بند 9/10) */
 import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { db } from '@/db/db'
 import { lookups } from '@/services/lookups'
 import { useToast } from '@/lib/toast'
 import { PageHeader } from '@/components/ui/navigation'
@@ -18,6 +19,8 @@ export default function ProductForm() {
   const toast = useToast()
   const queryClient = useQueryClient()
   const currency = useAuthStore((s) => s.currencySymbol())
+  const businessId = useAuthStore((s) => s.business?.id ?? '')
+  const isEdit = Boolean(id)
 
   const products = useLiveQuery(async () => lookups.products(), [], [])
   const units = useLiveQuery(async () => lookups.units(), [], [])
@@ -46,22 +49,53 @@ export default function ProductForm() {
     }
   }, [product, hydrated])
 
+  /** كود تلقائي متسلسل P-0001 */
+  async function nextProductCode(): Promise<string> {
+    const rows = await db.products.where('business_id').equals(businessId).toArray()
+    let max = 0
+    for (const r of rows) {
+      const m = /^P-(\d+)$/.exec(String(r.code ?? ''))
+      if (m) max = Math.max(max, Number(m[1]))
+    }
+    return `P-${String(max + 1).padStart(4, '0')}`
+  }
+
   async function save() {
-    if (!id) { toast.error('صنف غير صحيح.'); return }
     if (!name.trim()) { toast.error('اسم الصنف مطلوب.'); return }
+    if (!baseUnit) { toast.error('اختر الوحدة الأساسية.'); return }
     setSaving(true)
     try {
-      const { error } = await supabase.from('products').update({
-        name: name.trim(),
-        item_type: itemType,
-        base_unit_id: baseUnit,
-        sale_price: salePrice ?? 0,
-        min_stock: minStock ?? 0,
-        active,
-        notes: notes.trim() || null,
-      }).eq('id', id)
-      if (error) throw new Error('تعذر حفظ التعديلات.')
-      toast.success('تم حفظ التعديلات.')
+      if (isEdit) {
+        const { error } = await supabase.from('products').update({
+          name: name.trim(),
+          item_type: itemType,
+          base_unit_id: baseUnit,
+          sale_price: salePrice ?? 0,
+          min_stock: minStock ?? 0,
+          active,
+          notes: notes.trim() || null,
+        }).eq('id', id)
+        if (error) throw new Error('تعذر حفظ التعديلات.')
+        toast.success('تم حفظ التعديلات.')
+      } else {
+        const code = await nextProductCode()
+        const { error } = await supabase.from('products').insert({
+          business_id: businessId,
+          code,
+          name: name.trim(),
+          item_type: itemType,
+          base_unit_id: baseUnit,
+          sales_unit_id: baseUnit,
+          sale_price: itemType === 'FINISHED_PRODUCT' ? (salePrice ?? 0) : 0,
+          min_stock: minStock ?? 0,
+          active,
+          notes: notes.trim() || null,
+          avg_cost: 0,
+          last_purchase_cost: 0,
+        })
+        if (error) throw new Error('تعذر إضافة الصنف.')
+        toast.success(`تمت إضافة الصنف — الكود ${code}`)
+      }
       const { refreshLookups } = await import('@/services/lookups')
       void refreshLookups()
       void queryClient.invalidateQueries()
@@ -73,7 +107,7 @@ export default function ProductForm() {
     }
   }
 
-  if (!product) {
+  if (isEdit && !product) {
     return (
       <div className="space-y-3">
         <PageHeader title="تعديل صنف" backTo="/products" />
@@ -84,7 +118,7 @@ export default function ProductForm() {
 
   return (
     <div className="pb-4">
-      <PageHeader title={`تعديل: ${product.code}`} backTo="/products" />
+      <PageHeader title={isEdit ? `تعديل: ${product?.code ?? ''}` : 'إضافة صنف جديد'} backTo="/products" />
 
       <Card className="space-y-4 p-5">
         <div className="grid grid-cols-2 gap-3">
@@ -129,7 +163,7 @@ export default function ProductForm() {
           <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
         </Field>
         <div className="flex gap-2">
-          <Button className="flex-1" loading={saving} onClick={() => void save()}>حفظ التعديلات</Button>
+          <Button className="flex-1" loading={saving} onClick={() => void save()}>{isEdit ? 'حفظ التعديلات' : 'إضافة الصنف'}</Button>
           <Button variant="outline" className="flex-1" onClick={() => navigate('/products')} disabled={saving}>إلغاء</Button>
         </div>
       </Card>

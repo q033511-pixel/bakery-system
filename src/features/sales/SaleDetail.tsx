@@ -6,7 +6,7 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
-import { Ban, Info, ShieldAlert } from 'lucide-react'
+import { Ban, Info, ShieldAlert, Printer } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { salesService } from '@/services/operations'
 import { useToast } from '@/lib/toast'
@@ -31,6 +31,7 @@ export default function SaleDetail() {
   const queryClient = useQueryClient()
   const currency = useAuthStore((s) => s.currencySymbol())
   const has = useAuthStore((s) => s.has)
+  const business = useAuthStore((s) => s.business)
 
   const [voidOpen, setVoidOpen] = useState(false)
   const [reason, setReason] = useState('')
@@ -80,18 +81,35 @@ export default function SaleDetail() {
   const itemsSum = sumMoney(items.map((i) => i.total))
   const isDistribution = data.channel === 'DISTRIBUTION'
   const canVoid = has('sales.void') && data.status === 'CONFIRMED' && !isDistribution
+  const canPrint = data.status === 'CONFIRMED'
+
+  const printReceipt = () => {
+    document.body.classList.add('printing-receipt')
+    window.print()
+    setTimeout(() => document.body.classList.remove('printing-receipt'), 600)
+  }
 
   return (
     <div className="pb-4">
+      <div className="print-hide">
       <PageHeader
         title={`فاتورة ${data.doc_number}`}
         subtitle={fmtDateTime(data.created_at)}
         backTo="/sales"
-        action={canVoid ? (
-          <Button variant="danger" icon={<Ban className="size-4" />} onClick={() => setVoidOpen(true)}>
-            إلغاء البيع
-          </Button>
-        ) : undefined}
+        action={
+          <div className="flex gap-2">
+            {canPrint && (
+              <Button variant="outline" icon={<Printer className="size-4" />} onClick={printReceipt}>
+                طباعة
+              </Button>
+            )}
+            {canVoid && (
+              <Button variant="danger" icon={<Ban className="size-4" />} onClick={() => setVoidOpen(true)}>
+                إلغاء البيع
+              </Button>
+            )}
+          </div>
+        }
       />
 
       {/* لافتات الحالة */}
@@ -172,6 +190,68 @@ export default function SaleDetail() {
           </Button>
         </div>
       </Modal>
+      </div>{/* /print-hide */}
+
+      {/* ===== وصل الطباعة — يظهر فقط عند الطباعة ===== */}
+      <div className="print-area hidden" aria-hidden="true">
+        <div style={{ fontFamily: 'Cairo, Tahoma, sans-serif', direction: 'rtl' }}>
+          <div style={{ textAlign: 'center', borderBottom: '2px dashed #999', paddingBottom: 8, marginBottom: 8 }}>
+            <div style={{ fontSize: 20, fontWeight: 900 }}>{business?.name ?? 'فاتورة بيع'}</div>
+            {business?.phone && <div style={{ fontSize: 11, direction: 'ltr' }}>{business.phone}</div>}
+            {business?.address && <div style={{ fontSize: 11 }}>{business.address}</div>}
+            <div style={{ fontSize: 13, fontWeight: 800, marginTop: 4 }}>فاتورة بيع</div>
+          </div>
+          <table style={{ width: '100%', fontSize: 11, marginBottom: 6 }}>
+            <tbody>
+              <tr>
+                <td>رقم الفاتورة: <b>{data.doc_number}</b></td>
+                <td>التاريخ: <b>{fmtDateTime(data.created_at)}</b></td>
+              </tr>
+              <tr>
+                <td>العميل: <b>{data.customers?.name ?? 'عميل نقدي'}</b></td>
+                <td>الدفع: <b>{data.payment_type === 'CASH' ? 'نقدي' : 'آجل'}</b></td>
+              </tr>
+            </tbody>
+          </table>
+          <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '1.5px solid #333' }}>
+                <th style={{ textAlign: 'right', padding: '3px 2px' }}>الصنف</th>
+                <th style={{ padding: '3px 2px' }}>كمية</th>
+                <th style={{ padding: '3px 2px' }}>سعر</th>
+                <th style={{ textAlign: 'left', padding: '3px 2px' }}>إجمالي</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((i) => (
+                <tr key={i.id} style={{ borderBottom: '1px dotted #ccc' }}>
+                  <td style={{ padding: '3px 2px' }}>{i.products?.name ?? '—'}</td>
+                  <td style={{ padding: '3px 2px', textAlign: 'center' }}>{i.quantity} {i.units?.symbol ?? ''}</td>
+                  <td style={{ padding: '3px 2px', textAlign: 'center' }}>{formatMoney(i.unit_price, currency)}</td>
+                  <td style={{ padding: '3px 2px', textAlign: 'left' }}>{formatMoney(i.total, currency)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div style={{ marginTop: 8, fontSize: 13 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>المجموع</span><b>{formatMoney(itemsSum, currency)}</b>
+            </div>
+            {data.discount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>الخصم</span><b>−{formatMoney(data.discount, currency)}</b>
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid #333', marginTop: 4, paddingTop: 4, fontSize: 16, fontWeight: 900 }}>
+              <span>الإجمالي</span><span>{formatMoney(data.total, currency)}</span>
+            </div>
+          </div>
+          {data.notes && <p style={{ fontSize: 10, marginTop: 6 }}>ملاحظات: {data.notes}</p>}
+          <div style={{ marginTop: 12, textAlign: 'center', fontSize: 11, borderTop: '2px dashed #999', paddingTop: 6 }}>
+            شكراً لتعاملكم معنا — نتشرف بخدمتكم دائماً
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

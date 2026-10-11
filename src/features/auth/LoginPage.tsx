@@ -65,9 +65,16 @@ export default function LoginPage() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-primary-50 via-surface-50 to-surface-100 p-5">
       <div className="w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center gap-2 text-center">
-          <BakeryLogo className="size-16" />
-          <h1 className="text-xl font-extrabold text-stone-900">نظام إدارة المخبز</h1>
-          <p className="text-xs text-stone-500">بيع، شراء، إنتاج، مخزون، توزيع وحسابات — يعمل أوفلاين ويزامن تلقائياً</p>
+          <div className="anim-pop flex size-16 items-center justify-center rounded-2xl bg-white shadow-card-lg">
+            <BakeryLogo className="size-12" />
+          </div>
+          <h1 className="text-xl font-black text-stone-900">نظام إدارة المخبز</h1>
+          <p className="text-xs text-stone-500">بيع، شراء، إنتاج، مخزون، توزيع وحسابات — في مكان واحد</p>
+          <div className="mt-1 flex flex-wrap justify-center gap-1.5">
+            <span className="rounded-full border border-success-200 bg-success-50 px-2.5 py-0.5 text-2xs font-bold text-success-700">يعمل بدون إنترنت</span>
+            <span className="rounded-full border border-info-200 bg-info-50 px-2.5 py-0.5 text-2xs font-bold text-info-700">بياناتك على جهازك</span>
+            <span className="rounded-full border border-primary-200 bg-primary-50 px-2.5 py-0.5 text-2xs font-bold text-primary-700">تقارير فورية</span>
+          </div>
         </div>
 
         {pendingMsg && (

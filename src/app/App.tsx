@@ -47,6 +47,7 @@ const ReportsHub = lazy(() => import('@/features/reports/ReportsHub'))
 const ReportView = lazy(() => import('@/features/reports/ReportView'))
 const AuditLogPage = lazy(() => import('@/features/audit/AuditLogPage'))
 const SettingsPage = lazy(() => import('@/features/settings/SettingsPage'))
+const BackupCenter = lazy(() => import('@/features/settings/BackupCenter'))
 const UsersSettings = lazy(() => import('@/features/settings/UsersSettings'))
 const SyncCenter = lazy(() => import('@/features/sync/SyncCenter'))
 const MorePage = lazy(() => import('@/app/MorePage'))
@@ -121,6 +122,7 @@ export default function App() {
             <Route path="audit" element={<AuditLogPage />} />
 
             <Route path="settings" element={<SettingsPage />} />
+          <Route path="settings/backup" element={<BackupCenter />} />
             <Route path="settings/users" element={<UsersSettings />} />
             <Route path="sync" element={<SyncCenter />} />
             <Route path="more" element={<MorePage />} />

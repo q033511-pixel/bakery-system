@@ -6,7 +6,7 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, ShoppingCart, Package, MoreHorizontal, Home,
-  Users, Truck, FileText, Settings, Factory, Wallet, ReceiptText, RefreshCw, LogOut, Plus, ScrollText,
+  Users, Truck, FileText, Settings, Factory, Wallet, ReceiptText, RefreshCw, LogOut, Plus, ScrollText, HardDrive,
 } from 'lucide-react'
 import { useAuthStore } from './authStore'
 import { useSyncStore, drainQueue } from '@/services/sync/syncEngine'
@@ -30,6 +30,7 @@ const MORE_ITEMS = [
   { to: '/cash', label: 'الصندوق', icon: Wallet, perm: 'cash.view' as const },
   { to: '/reports', label: 'التقارير', icon: FileText, perm: 'reports.view' as const },
   { to: '/audit', label: 'سجل التدقيق', icon: ScrollText, perm: 'audit.view' as const },
+  { to: '/settings/backup', label: 'النسخ الاحتياطية', icon: HardDrive, perm: null },
   { to: '/sync', label: 'المزامنة', icon: RefreshCw, perm: null },
   { to: '/settings', label: 'الإعدادات', icon: Settings, perm: 'settings.manage' as const },
 ]
@@ -65,6 +66,7 @@ function Sidebar({ onSignOut }: { onSignOut: () => void }) {
         >
           <LogOut className="size-4" /> تسجيل الخروج
         </button>
+        <p className="mt-1 px-3 text-center text-2xs text-stone-600">الإصدار 8 • وضع محلي آمن</p>
       </div>
     </aside>
   )
@@ -123,7 +125,7 @@ function BottomNav() {
             to={t.to}
             end={t.to === '/'}
             className={({ isActive }) =>
-              `flex flex-col items-center gap-0.5 py-2.5 text-2xs font-bold transition ${isActive ? 'text-primary-700' : 'text-stone-400'}`
+              `mx-1 my-1.5 flex flex-col items-center gap-0.5 rounded-xl py-1.5 text-2xs font-bold transition ${isActive ? 'bg-primary-50 text-primary-700' : 'text-stone-400 active:bg-stone-100'}`
             }
           >
             <t.icon className="size-5" />
@@ -132,7 +134,7 @@ function BottomNav() {
         ))}
         <NavLink
           to="/more"
-          className={`flex flex-col items-center gap-0.5 py-2.5 text-2xs font-bold transition ${isMoreActive ? 'text-primary-700' : 'text-stone-400'}`}
+          className={`mx-1 my-1.5 flex flex-col items-center gap-0.5 rounded-xl py-1.5 text-2xs font-bold transition ${isMoreActive ? 'bg-primary-50 text-primary-700' : 'text-stone-400 active:bg-stone-100'}`}
         >
           <MoreHorizontal className="size-5" />
           المزيد
@@ -158,6 +160,7 @@ function QuickSaleFab() {
 
 export default function AppShell() {
   const setProfile = useAuthStore((s) => s.setProfile)
+  const location = useLocation()
   const handleSignOut = async () => {
     await signOut()
     setProfile(null)
@@ -171,7 +174,9 @@ export default function AppShell() {
       <div className="md:mr-60">
         <TopBar />
         <main className="mx-auto max-w-5xl px-4 pb-28 pt-4 md:px-6 md:pb-10">
-          <Outlet />
+          <div key={location.pathname} className="page-enter">
+            <Outlet />
+          </div>
         </main>
       </div>
       <BottomNav />

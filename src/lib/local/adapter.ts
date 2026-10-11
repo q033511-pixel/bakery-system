@@ -713,7 +713,10 @@ export class QueryBuilder implements PromiseLike<QueryRowsResult> {
         created_at: typeof v.created_at === 'string' && v.created_at ? v.created_at : nowIso(),
         updated_at: typeof v.updated_at === 'string' && v.updated_at ? v.updated_at : nowIso(),
       }))
-      if (prepared.length > 0) await table.bulkPut(prepared as LocalRow[])
+      if (prepared.length > 0) {
+        await table.bulkPut(prepared as LocalRow[])
+        queueLookupsSync()
+      }
       if (!this.selectSpec) return { data: null, error: null }
       return this.finalize(prepared)
     }
@@ -724,14 +727,20 @@ export class QueryBuilder implements PromiseLike<QueryRowsResult> {
 
     if (m.kind === 'update') {
       const updated: QueryRow[] = matched.map((r) => ({ ...r, ...m.patch, updated_at: nowIso() }))
-      if (updated.length > 0) await table.bulkPut(updated as LocalRow[])
+      if (updated.length > 0) {
+        await table.bulkPut(updated as LocalRow[])
+        queueLookupsSync()
+      }
       if (!this.selectSpec) return { data: null, error: null }
       return this.finalize(updated)
     }
 
     // delete
     const ids = matched.map((r) => String(r.id))
-    if (ids.length > 0) await table.bulkDelete(ids)
+    if (ids.length > 0) {
+      await table.bulkDelete(ids)
+      queueLookupsSync()
+    }
     if (!this.selectSpec) return { data: null, error: null }
     return this.finalize(matched)
   }
@@ -740,6 +749,23 @@ export class QueryBuilder implements PromiseLike<QueryRowsResult> {
 /** نقطة الدخول المطابقة لـ supabase.from(...) */
 export function from(table: string): QueryBuilder {
   return new QueryBuilder(table)
+}
+
+// ----------------------------------------------------------------------------
+// تحديث الكاش المرجعي تلقائياً بعد أي كتابة ناجحة (بند 41):
+// النماذج كلها تقرأ من cache_* — بدون هذا تظل الموردون/العملاء/المنتجات الجديدة
+// غير مرئية للنماذج حتى إعادة الدخول. ديناميكي لتجنب التبعية الدائرية، وبمؤجل
+// لتجميع سلاسل الكتابات في تحديث واحد.
+// ----------------------------------------------------------------------------
+let lookupsSyncTimer: ReturnType<typeof setTimeout> | null = null
+export function queueLookupsSync(): void {
+  if (lookupsSyncTimer) clearTimeout(lookupsSyncTimer)
+  lookupsSyncTimer = setTimeout(() => {
+    lookupsSyncTimer = null
+    void import('@/services/lookups')
+      .then((m) => m.refreshLookups())
+      .catch(() => undefined)
+  }, 120)
 }
 
 // ============================================================================

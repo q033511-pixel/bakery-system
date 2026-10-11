@@ -7,12 +7,12 @@ type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success' | 
 type ButtonSize = 'sm' | 'md' | 'lg'
 
 const VARIANTS: Record<ButtonVariant, string> = {
-  primary: 'bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800 shadow-sm',
+  primary: 'bg-gradient-to-l from-primary-600 to-primary-500 text-white hover:from-primary-700 hover:to-primary-600 active:from-primary-800 active:to-primary-700 shadow-sm shadow-primary-600/25',
   secondary: 'bg-stone-800 text-white hover:bg-stone-900 active:bg-black shadow-sm',
   ghost: 'bg-transparent text-stone-700 hover:bg-stone-100 active:bg-stone-200',
-  danger: 'bg-danger-600 text-white hover:bg-danger-700 active:bg-danger-800 shadow-sm',
-  success: 'bg-success-600 text-white hover:bg-success-700 active:bg-success-800 shadow-sm',
-  outline: 'border border-stone-300 bg-white text-stone-800 hover:bg-stone-50 active:bg-stone-100',
+  danger: 'bg-danger-600 text-white hover:bg-danger-700 active:bg-danger-800 shadow-sm shadow-danger-600/25',
+  success: 'bg-success-600 text-white hover:bg-success-700 active:bg-success-800 shadow-sm shadow-success-600/25',
+  outline: 'border border-stone-300 bg-white text-stone-800 hover:border-primary-300 hover:bg-primary-50/50 active:bg-primary-100/60',
 }
 
 const SIZES: Record<ButtonSize, string> = {
@@ -37,9 +37,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       ref={ref}
       type={type}
       disabled={disabled || loading}
-      className={`inline-flex select-none items-center justify-center rounded-lg font-bold transition-colors
-        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2
-        disabled:cursor-not-allowed disabled:opacity-50 ${VARIANTS[variant]} ${SIZES[size]} ${className}`}
+      className={`inline-flex select-none items-center justify-center rounded-xl font-bold transition-all duration-150
+        active:scale-[.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2
+        disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 ${VARIANTS[variant]} ${SIZES[size]} ${className}`}
       {...rest}
     >
       {loading ? <Loader2 className="size-4 animate-spin" /> : icon}
@@ -93,8 +93,16 @@ export function Field({ label, required, error, children, hint }: {
 }
 
 // ---------- Card ----------
-export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <div className={`rounded-xl border border-stone-200 bg-white shadow-card ${className}`}>{children}</div>
+export function Card({ children, className = '', hover = false }: { children: ReactNode; className?: string; hover?: boolean }) {
+  return (
+    <div
+      className={`rounded-xl border border-stone-200 bg-white shadow-card transition-all duration-200 ${
+        hover ? 'hover:-translate-y-0.5 hover:border-primary-300 hover:shadow-card-lg' : ''
+      } ${className}`}
+    >
+      {children}
+    </div>
+  )
 }
 
 // ---------- Badge ----------
@@ -138,29 +146,82 @@ export function StatusBadge({ status, label }: { status: string; label?: string 
 }
 
 // ---------- StatCard ----------
-export function StatCard({ title, value, sub, tone = 'default', icon }: {
+const STAT_TONES = {
+  default: { text: 'text-stone-900', wash: 'bg-stone-100 text-stone-600' },
+  success: { text: 'text-success-700', wash: 'bg-success-50 text-success-600' },
+  danger: { text: 'text-danger-700', wash: 'bg-danger-50 text-danger-600' },
+  warning: { text: 'text-warning-700', wash: 'bg-warning-50 text-warning-600' },
+  primary: { text: 'text-primary-700', wash: 'bg-primary-50 text-primary-600' },
+} as const
+
+export function StatCard({ title, value, sub, tone = 'default', icon, trend }: {
   title: string; value: string; sub?: string; tone?: 'default' | 'success' | 'danger' | 'warning' | 'primary'; icon?: ReactNode
+  trend?: { dir: 'up' | 'down'; label: string }
 }) {
-  const toneClass = {
-    default: 'text-stone-900',
-    success: 'text-success-700',
-    danger: 'text-danger-700',
-    warning: 'text-warning-700',
-    primary: 'text-primary-700',
-  }[tone]
+  const t = STAT_TONES[tone]
   return (
-    <Card className="flex items-center gap-3 p-4">
-      {icon && <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-700">{icon}</div>}
+    <Card hover className="flex items-center gap-3 p-4">
+      {icon && <div className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${t.wash}`}>{icon}</div>}
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs font-semibold text-stone-500">{title}</p>
-        <p className={`truncate text-lg font-extrabold tabular-nums ${toneClass}`}>{value}</p>
-        {sub && <p className="truncate text-2xs text-stone-400">{sub}</p>}
+        <p className={`truncate text-lg font-extrabold tabular-nums ${t.text}`}>{value}</p>
+        {(sub || trend) && (
+          <p className="flex items-center gap-1 truncate text-2xs text-stone-400">
+            {trend && (
+              <span className={`inline-flex items-center gap-0.5 font-bold ${trend.dir === 'up' ? 'text-success-600' : 'text-danger-500'}`}>
+                <svg viewBox="0 0 12 12" className="size-2.5 fill-current" aria-hidden="true">
+                  {trend.dir === 'up' ? <path d="M6 2l4 5H2z" /> : <path d="M6 10L2 5h8z" />}
+                </svg>
+                {trend.label}
+              </span>
+            )}
+            {sub}
+          </p>
+        )}
       </div>
     </Card>
   )
 }
 
 // ---------- Skeleton ----------
-export function Skeleton({ className = '' }: { className?: string }) {
-  return <div className={`animate-pulse rounded-lg bg-stone-200/70 ${className}`} />
+export function Skeleton({ className = '', shimmer = true }: { className?: string; shimmer?: boolean }) {
+  return <div className={`${shimmer ? 'skeleton-shimmer' : 'animate-pulse bg-stone-200/70'} rounded-lg ${className}`} />
+}
+
+// ---------- MiniBars — رسم بياني مصغر SVG خالص ----------
+export interface MiniBarPoint {
+  label: string
+  value: number
+  highlight?: boolean
+}
+
+export function MiniBars({ points, height = 96, format }: {
+  points: MiniBarPoint[]; height?: number; format?: (v: number) => string
+}) {
+  const max = Math.max(...points.map((p) => p.value), 1)
+  return (
+    <div className="flex items-end justify-between gap-1.5" style={{ height }} role="img" aria-label="مخطط المبيعات">
+      {points.map((p, i) => {
+        const h = Math.max((p.value / max) * (height - 26), p.value > 0 ? 6 : 3)
+        return (
+          <div key={i} className="group flex min-w-0 flex-1 flex-col items-center gap-1" style={{ height }}>
+            <span className="text-center text-2xs font-bold tabular-nums text-stone-500 opacity-0 transition-opacity group-hover:opacity-100">
+              {format ? format(p.value) : p.value}
+            </span>
+            <div
+              className={`bar-grow w-full max-w-8 rounded-t-md transition-colors ${
+                p.highlight
+                  ? 'bg-gradient-to-t from-primary-600 to-primary-400'
+                  : 'bg-gradient-to-t from-primary-200 to-primary-100 group-hover:from-primary-300 group-hover:to-primary-200'
+              }`}
+              style={{ height: h, animationDelay: `${i * 60}ms` }}
+            />
+            <span className={`truncate text-2xs ${p.highlight ? 'font-extrabold text-primary-700' : 'text-stone-400'}`}>
+              {p.label}
+            </span>
+          </div>
+        )
+      })}
+    </div>
+  )
 }

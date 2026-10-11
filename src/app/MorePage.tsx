@@ -2,7 +2,7 @@
 import { Link } from 'react-router-dom'
 import {
   ReceiptText, Factory, Truck, Users, Wallet, FileText, Settings,
-  ScrollText, RefreshCw, Package, ChevronLeft, Car,
+  ScrollText, RefreshCw, Package, ChevronLeft, Car, HardDrive,
 } from 'lucide-react'
 import { useAuthStore } from './authStore'
 import { SyncStatusBadge } from '@/components/ui/states'
@@ -19,6 +19,7 @@ const ITEMS = [
   { to: '/cash', label: 'الصندوق', desc: 'الحسابات والحركة المالية', icon: Wallet, perm: 'cash.view' },
   { to: '/reports', label: 'التقارير', desc: '11 تقريراً مع تصدير CSV', icon: FileText, perm: 'reports.view' },
   { to: '/audit', label: 'سجل التدقيق', desc: 'كل التغييرات الحساسة', icon: ScrollText, perm: 'audit.view' },
+  { to: '/settings/backup', label: 'النسخ الاحتياطية', desc: 'تصدير واستعادة بياناتك — مهم جداً', icon: HardDrive, perm: null },
   { to: '/sync', label: 'مركز المزامنة', desc: 'العمليات المعلقة والفاشلة', icon: RefreshCw, perm: null },
   { to: '/settings', label: 'الإعدادات', desc: 'النشاط والصلاحيات والوحدات', icon: Settings, perm: 'settings.manage' },
 ] as const

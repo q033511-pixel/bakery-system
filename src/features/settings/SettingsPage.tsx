@@ -5,7 +5,7 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { ChevronLeft, Plus, Settings2, Users, Warehouse as WarehouseIcon } from 'lucide-react'
+import { ChevronLeft, HardDrive, Plus, Settings2, Users, Warehouse as WarehouseIcon } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { rpc } from '@/services/rpc'
 import { lookups, refreshLookups } from '@/services/lookups'
@@ -228,6 +228,24 @@ export default function SettingsPage() {
   return (
     <div className="pb-4">
       <PageHeader title="الإعدادات" subtitle="بيانات النشاط والبيانات المرجعية" backTo="/more" />
+
+      {/* ---------- النسخ الاحتياطية — أولاً ودائماً ---------- */}
+      <Link
+        to="/settings/backup"
+        className="mb-4 flex items-center gap-3 rounded-xl border border-success-200 bg-gradient-to-l from-success-50 to-white p-4 shadow-card transition hover:-translate-y-0.5 hover:shadow-card-lg active:scale-[.99]"
+      >
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-success-600 text-white">
+          <HardDrive className="size-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-1.5 text-sm font-extrabold text-stone-900">
+            مركز النسخ الاحتياطية
+            <span className="rounded-full bg-danger-600 px-1.5 py-0.5 text-2xs font-black text-white">مهم</span>
+          </span>
+          <span className="block truncate text-2xs text-stone-500">صدّر بياناتك واحفظها — بياناتك على هذا الجهاز فقط</span>
+        </span>
+        <ChevronLeft className="size-4 shrink-0 text-stone-400" />
+      </Link>
 
       {/* ---------- بيانات النشاط ---------- */}
       <Card className="mb-4 p-4">
