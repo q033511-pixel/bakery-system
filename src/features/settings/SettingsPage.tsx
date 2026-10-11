@@ -5,7 +5,7 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { ChevronLeft, HardDrive, Plus, Settings2, Users, Warehouse as WarehouseIcon } from 'lucide-react'
+import { ChevronLeft, HardDrive, Plus, Settings2, ShieldCheck, KeyRound, Lock, Warehouse as WarehouseIcon } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { rpc } from '@/services/rpc'
 import { lookups, refreshLookups } from '@/services/lookups'
@@ -16,6 +16,8 @@ import { Button, Card, Field, Input, Select } from '@/components/ui/primitives'
 import { QuantityInput } from '@/components/ui/inputs'
 import { Modal } from '@/components/ui/overlays'
 import { LoadingState, ErrorState } from '@/components/ui/states'
+import { changePinCode, lockApp } from '@/services/auth'
+import { getAutoLockMinutes, setAutoLockMinutes } from '@/lib/pin'
 import type { Business, ExpenseCategory, ProductCategory, Unit, UnitConversion, Warehouse } from '@/types'
 
 const WAREHOUSE_KINDS: Record<string, string> = {
@@ -109,6 +111,37 @@ export default function SettingsPage() {
     } finally {
       setSavingBusiness(false)
     }
+  }
+
+  // ----- الأمان: الرمز السري + القفل التلقائي -----
+  const [pinOpen, setPinOpen] = useState(false)
+  const [curPin, setCurPin] = useState('')
+  const [newPin, setNewPin] = useState('')
+  const [cfmPin, setCfmPin] = useState('')
+  const [savingPin, setSavingPin] = useState(false)
+  const [autolock, setAutolock] = useState(() => getAutoLockMinutes())
+
+  const digitsOnly = (v: string) => v.replace(/\D/g, '').slice(0, 4)
+
+  async function savePin() {
+    if (!/^\d{4}$/.test(curPin) || !/^\d{4}$/.test(newPin)) { toast.error('كل رمز يجب أن يكون 4 أرقام.'); return }
+    if (newPin !== cfmPin) { toast.error('تأكيد الرمز الجديد غير مطابق.'); return }
+    if (newPin === curPin) { toast.error('الرمز الجديد يطابق الرمز الحالي.'); return }
+    setSavingPin(true)
+    try {
+      await changePinCode(curPin, newPin)
+      toast.success('تم تغيير الرمز السري — استخدمه في القفل القادم.')
+      setPinOpen(false); setCurPin(''); setNewPin(''); setCfmPin('')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'تعذر تغيير الرمز.')
+    } finally { setSavingPin(false) }
+  }
+
+  function doLockNow() {
+    void lockApp().then(() => {
+      window.location.hash = '#/lock'
+      window.location.reload()
+    })
   }
 
   // ----- القوائم -----
@@ -246,6 +279,39 @@ export default function SettingsPage() {
         </span>
         <ChevronLeft className="size-4 shrink-0 text-stone-400" />
       </Link>
+
+      {/* ---------- الأمان والرمز السري ---------- */}
+      <Card className="mb-4 p-4">
+        <h2 className="mb-3 flex items-center gap-2 text-sm font-extrabold text-stone-800">
+          <ShieldCheck className="size-4 text-primary-700" /> الأمان والرمز السري
+        </h2>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Button variant="outline" icon={<KeyRound className="size-4" />} onClick={() => setPinOpen(true)}>
+            تغيير الرمز السري
+          </Button>
+          <Button variant="outline" icon={<Lock className="size-4" />} onClick={doLockNow}>
+            قفل النظام الآن
+          </Button>
+        </div>
+        <div className="mt-3">
+          <Field label="القفل التلقائي بعد الخمول" hint="يقفل النظام ويطلب الرمز بعد فترة عدم استخدام">
+            <Select
+              value={String(autolock)}
+              onChange={(e) => {
+                const min = Number(e.target.value)
+                setAutolock(min)
+                setAutoLockMinutes(min)
+                toast.info(min ? `سيُقفل النظام تلقائياً بعد ${min} دقيقة خمول.` : 'عُطل القفل التلقائي.')
+              }}
+            >
+              <option value="0">معطل</option>
+              <option value="5">بعد 5 دقائق</option>
+              <option value="15">بعد 15 دقيقة</option>
+              <option value="30">بعد 30 دقيقة</option>
+            </Select>
+          </Field>
+        </div>
+      </Card>
 
       {/* ---------- بيانات النشاط ---------- */}
       <Card className="mb-4 p-4">
@@ -392,23 +458,6 @@ export default function SettingsPage() {
         <p className="border-t border-stone-100 px-4 py-2.5 text-2xs text-stone-400">طرق ثابتة في النظام — تُحدد عند التسجيل لكل عملية.</p>
       </Card>
 
-      {/* ---------- إدارة المستخدمين ---------- */}
-      {has('users.manage') && (
-        <Link
-          to="/settings/users"
-          className="mb-4 flex items-center gap-3 rounded-xl border border-stone-200 bg-white p-4 shadow-card transition active:scale-[.99] hover:border-primary-300"
-        >
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-700">
-            <Users className="size-5" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-extrabold text-stone-900">إدارة المستخدمين والصلاحيات</span>
-            <span className="block text-2xs text-stone-500">تفعيل الأعضاء وتعيين الأدوار</span>
-          </span>
-          <ChevronLeft className="size-4 shrink-0 text-stone-300" />
-        </Link>
-      )}
-
       {/* ---------- المودالات ---------- */}
       <Modal open={whOpen} onClose={() => setWhOpen(false)} title="إضافة مستودع">
         <div className="space-y-3">
@@ -469,11 +518,23 @@ export default function SettingsPage() {
           <Button className="w-full" loading={saving} onClick={() => void addExpenseCategory()}>حفظ</Button>
         </div>
       </Modal>
+      <Modal open={pinOpen} onClose={() => setPinOpen(false)} title="تغيير الرمز السري">
+        <div className="space-y-3">
+          <Field label="الرمز الحالي" required>
+            <Input value={curPin} onChange={(e) => setCurPin(digitsOnly(e.target.value))} inputMode="numeric" maxLength={4} dir="ltr" className="text-center text-lg tracking-[0.5em]" autoComplete="off" />
+          </Field>
+          <Field label="الرمز الجديد" required hint="4 أرقام">
+            <Input value={newPin} onChange={(e) => setNewPin(digitsOnly(e.target.value))} inputMode="numeric" maxLength={4} dir="ltr" className="text-center text-lg tracking-[0.5em]" autoComplete="off" />
+          </Field>
+          <Field label="تأكيد الرمز الجديد" required error={cfmPin && cfmPin !== newPin ? 'غير مطابق' : null}>
+            <Input value={cfmPin} onChange={(e) => setCfmPin(digitsOnly(e.target.value))} inputMode="numeric" maxLength={4} dir="ltr" className="text-center text-lg tracking-[0.5em]" autoComplete="off" />
+          </Field>
+          <Button className="w-full" loading={savingPin} onClick={() => void savePin()}>حفظ الرمز الجديد</Button>
+        </div>
+      </Modal>
     </div>
   )
 }
-
-// ---------- مكون قسم قائمة عام ----------
 interface ListRowItem {
   id: string
   title: string

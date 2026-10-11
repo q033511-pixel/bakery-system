@@ -1,17 +1,25 @@
 /**
  * Router — HashRouter (بند 3/115/137): deep links وrefresh تعمل على GitHub Pages
  * بلا أي server rewrites. القرار مسجل في PROJECT_DECISIONS.md.
+ *
+ * البوابة (وضع محلي أحادي المستخدم):
+ *   لا نشاط تجاري → معالج الإعداد /setup
+ *   نشاط بلا رمز   → تعيين رمز للمرة الأولى /set-pin
+ *   رمز وجلسة مقفلة → شاشة القفل /lock
+ *   وإلا           → النظام مفتوح لهذه الجلسة
  */
 import { Suspense, lazy, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { HashRouter } from 'react-router-dom'
 import AppShell from './AppShell'
 import { useAuthStore, loadAuthState } from './authStore'
+import { hasPin, isUnlocked } from '@/lib/pin'
 import { LoadingState } from '@/components/ui/states'
 
 // Auth
-const LoginPage = lazy(() => import('@/features/auth/LoginPage'))
-const BootstrapPage = lazy(() => import('@/features/auth/BootstrapPage'))
+const SetupPage = lazy(() => import('@/features/auth/SetupPage'))
+const PinLock = lazy(() => import('@/features/auth/PinLock'))
+const SetPinOnce = lazy(() => import('@/features/auth/SetPinOnce'))
 
 // Core pages (heavy routes are code-split — بند 145/146)
 const Dashboard = lazy(() => import('@/features/dashboard/Dashboard'))
@@ -48,18 +56,15 @@ const ReportView = lazy(() => import('@/features/reports/ReportView'))
 const AuditLogPage = lazy(() => import('@/features/audit/AuditLogPage'))
 const SettingsPage = lazy(() => import('@/features/settings/SettingsPage'))
 const BackupCenter = lazy(() => import('@/features/settings/BackupCenter'))
-const UsersSettings = lazy(() => import('@/features/settings/UsersSettings'))
-const SyncCenter = lazy(() => import('@/features/sync/SyncCenter'))
 const MorePage = lazy(() => import('@/app/MorePage'))
 
 function Guard({ children }: { children: React.ReactNode }) {
-  const { profile, loaded } = useAuthStore()
+  const { profile, loaded, hasBusiness } = useAuthStore()
 
-  if (!loaded) return <div className="flex min-h-screen items-center justify-center"><LoadingState label="جارٍ التحقق من الجلسة..." /></div>
-  if (!profile) return <Navigate to="/login" replace />
-  if (profile.role === 'PENDING' || !profile.business_id) {
-    return <Navigate to="/login" replace state={{ pending: true }} />
-  }
+  if (!loaded) return <div className="flex min-h-screen items-center justify-center"><LoadingState label="جارٍ تجهيز النظام..." /></div>
+  if (!hasBusiness) return <Navigate to="/setup" replace />
+  if (!hasPin()) return <Navigate to="/set-pin" replace />
+  if (!profile || !isUnlocked()) return <Navigate to="/lock" replace />
   return <>{children}</>
 }
 
@@ -73,8 +78,9 @@ export default function App() {
     <HashRouter>
       <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><LoadingState /></div>}>
         <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/bootstrap" element={<BootstrapPage />} />
+          <Route path="/setup" element={<SetupPage />} />
+          <Route path="/lock" element={<PinLock />} />
+          <Route path="/set-pin" element={<SetPinOnce />} />
 
           <Route element={<Guard><AppShell /></Guard>}>
             <Route index element={<Dashboard />} />
@@ -122,9 +128,7 @@ export default function App() {
             <Route path="audit" element={<AuditLogPage />} />
 
             <Route path="settings" element={<SettingsPage />} />
-          <Route path="settings/backup" element={<BackupCenter />} />
-            <Route path="settings/users" element={<UsersSettings />} />
-            <Route path="sync" element={<SyncCenter />} />
+            <Route path="settings/backup" element={<BackupCenter />} />
             <Route path="more" element={<MorePage />} />
           </Route>
 

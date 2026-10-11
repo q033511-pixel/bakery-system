@@ -2,16 +2,17 @@
  * AppShell — التنقل التكيفي (بند 49):
  * - الموبايل: Bottom Navigation (الرئيسية/المبيعات/المخزون/المزيد) + زر بيع سريع عائم
  * - سطح المكتب: Sidebar ثابت + شريط علوي
+ * - الأمان: زر «قفل النظام» + قفل تلقائي بعد فترة خمول (افتراضي 15 دقيقة)
  */
+import { useEffect } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, ShoppingCart, Package, MoreHorizontal, Home,
-  Users, Truck, FileText, Settings, Factory, Wallet, ReceiptText, RefreshCw, LogOut, Plus, ScrollText, HardDrive,
+  Users, Truck, FileText, Settings, Factory, Wallet, ReceiptText, Lock, Plus, ScrollText, HardDrive,
 } from 'lucide-react'
 import { useAuthStore } from './authStore'
-import { useSyncStore, drainQueue } from '@/services/sync/syncEngine'
-import { SyncStatusBadge } from '@/components/ui/states'
-import { signOut } from '@/services/auth'
+import { lockApp } from '@/services/auth'
+import { getAutoLockMinutes } from '@/lib/pin'
 import { ROLE_LABELS } from '@/lib/permissions'
 
 const MAIN_TABS = [
@@ -31,11 +32,38 @@ const MORE_ITEMS = [
   { to: '/reports', label: 'التقارير', icon: FileText, perm: 'reports.view' as const },
   { to: '/audit', label: 'سجل التدقيق', icon: ScrollText, perm: 'audit.view' as const },
   { to: '/settings/backup', label: 'النسخ الاحتياطية', icon: HardDrive, perm: null },
-  { to: '/sync', label: 'المزامنة', icon: RefreshCw, perm: null },
   { to: '/settings', label: 'الإعدادات', icon: Settings, perm: 'settings.manage' as const },
 ]
 
-function Sidebar({ onSignOut }: { onSignOut: () => void }) {
+/** قفل فوري + إعادة تحميل لنظيفة الحالة */
+function doLock(): void {
+  void lockApp().then(() => {
+    window.location.hash = '#/lock'
+    window.location.reload()
+  })
+}
+
+/** مراقبة الخمول — قفل تلقائي بعد دقائق محددة (0 = معطل) */
+function useAutoLock() {
+  useEffect(() => {
+    const minutes = getAutoLockMinutes()
+    if (!minutes) return
+    let timer: number | undefined
+    const reset = () => {
+      window.clearTimeout(timer)
+      timer = window.setTimeout(doLock, minutes * 60_000)
+    }
+    const evts: (keyof WindowEventMap)[] = ['pointerdown', 'keydown', 'wheel', 'touchstart']
+    evts.forEach((e) => window.addEventListener(e, reset, { passive: true }))
+    reset()
+    return () => {
+      window.clearTimeout(timer)
+      evts.forEach((e) => window.removeEventListener(e, reset))
+    }
+  }, [])
+}
+
+function Sidebar() {
   const profile = useAuthStore((s) => s.profile)
   const business = useAuthStore((s) => s.business)
   const has = useAuthStore((s) => s.has)
@@ -61,10 +89,10 @@ function Sidebar({ onSignOut }: { onSignOut: () => void }) {
 
       <div className="border-t border-stone-800 p-3">
         <button
-          onClick={onSignOut}
+          onClick={doLock}
           className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-bold text-stone-400 transition hover:bg-stone-800 hover:text-white"
         >
-          <LogOut className="size-4" /> تسجيل الخروج
+          <Lock className="size-4" /> قفل النظام
         </button>
         <p className="mt-1 px-3 text-center text-2xs text-stone-600">الإصدار 8 • وضع محلي آمن</p>
       </div>
@@ -88,27 +116,18 @@ function SidebarLink({ to, icon, label, active }: { to: string; icon: React.Reac
 }
 
 function TopBar() {
-  const { online, syncing } = useSyncStore()
   return (
     <header className="sticky top-0 z-20 flex h-14 items-center justify-between gap-3 border-b border-stone-200 bg-white/90 px-4 backdrop-blur md:px-6">
-      <div className="flex items-center gap-2">
-        <SyncStatusBadge />
-        {online && !syncing && (
-          <button onClick={() => void drainQueue()} className="hidden rounded-lg p-1.5 text-stone-400 transition hover:bg-stone-100 sm:block" aria-label="مزامنة الآن">
-            <RefreshCw className="size-4" />
-          </button>
-        )}
-      </div>
-      <MobileSignOut />
+      <p className="text-2xs font-bold text-stone-400">وضع محلي — بياناتك على جهازك</p>
+      <MobileLock />
     </header>
   )
 }
 
-function MobileSignOut() {
-  const signOutNow = async () => { await signOut(); window.location.hash = '#/login'; window.location.reload() }
+function MobileLock() {
   return (
-    <button onClick={() => void signOutNow()} className="rounded-lg p-2 text-stone-400 transition hover:bg-stone-100 md:hidden" aria-label="تسجيل الخروج">
-      <LogOut className="size-5" />
+    <button onClick={doLock} className="rounded-lg p-2 text-stone-400 transition hover:bg-stone-100 md:hidden" aria-label="قفل النظام">
+      <Lock className="size-5" />
     </button>
   )
 }
@@ -159,18 +178,12 @@ function QuickSaleFab() {
 }
 
 export default function AppShell() {
-  const setProfile = useAuthStore((s) => s.setProfile)
+  useAutoLock()
   const location = useLocation()
-  const handleSignOut = async () => {
-    await signOut()
-    setProfile(null)
-    window.location.hash = '#/login'
-    window.location.reload()
-  }
 
   return (
     <div className="min-h-screen">
-      <Sidebar onSignOut={() => void handleSignOut()} />
+      <Sidebar />
       <div className="md:mr-60">
         <TopBar />
         <main className="mx-auto max-w-5xl px-4 pb-28 pt-4 md:px-6 md:pb-10">

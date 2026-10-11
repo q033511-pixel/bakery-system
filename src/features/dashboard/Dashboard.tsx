@@ -8,14 +8,13 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import {
   ShoppingCart, Wallet, ReceiptText, Factory, TrendingDown, Users, Truck,
-  Plus, Package, AlertTriangle, RefreshCw, CalendarDays, HardDrive, History,
+  Plus, Package, RefreshCw, CalendarDays, HardDrive, History,
   CheckCircle2, Circle, ArrowLeft, ShieldCheck, CloudOff,
 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { rpc } from '@/services/rpc'
 import { db } from '@/db/db'
 import { useAuthStore } from '@/app/authStore'
-import { useSyncStore } from '@/services/sync/syncEngine'
 import { formatMoney } from '@/lib/money'
 import { fmtDate } from '@/lib/dates'
 import { StatCard, Card, Skeleton, MiniBars, type MiniBarPoint } from '@/components/ui/primitives'
@@ -155,7 +154,6 @@ export default function Dashboard() {
   const has = useAuthStore((s) => s.has)
   const currency = business?.currency_symbol ?? '₪'
   const bid = business?.id
-  const { online, pendingCount } = useSyncStore()
   const week = useWeeklySales(bid)
   const activity = useRecentActivity(bid)
 
@@ -214,21 +212,11 @@ export default function Dashboard() {
             </Link>
             <span className="glass-card inline-flex h-10 items-center gap-1.5 rounded-xl px-3 text-2xs font-bold">
               <CloudOff className="size-3.5" />
-              {online ? 'بياناتك على جهازك — ومتاحة بدون إنترنت' : 'أوفلاين — كل شيء يعمل طبيعياً'}
+              بياناتك على جهازك — ومتاحة بدون إنترنت
             </span>
           </div>
         </div>
       </div>
-
-      {/* تنبيه الأوفلاين */}
-      {!online && pendingCount > 0 && (
-        <Card className="flex items-center gap-3 border-warning-200 bg-warning-50 p-3.5">
-          <AlertTriangle className="size-5 shrink-0 text-warning-600" />
-          <p className="text-xs font-bold leading-relaxed text-warning-800">
-            {pendingCount} عملية بانتظار المزامنة — كلها محفوظة بأمان على جهازك.
-          </p>
-        </Card>
-      )}
 
       {/* ===== قائمة الترحيب للنظام الجديد ===== */}
       {showChecklist && (

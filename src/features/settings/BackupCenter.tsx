@@ -11,11 +11,12 @@ import { useToast } from '@/lib/toast'
 import { db } from '@/db/db'
 import { fmtDateTime } from '@/lib/dates'
 import {
+  exportBackupFile, parseBackup, restoreBackup, wipeAllData, lastBackupAt, type BackupFile,
+} from '@/lib/backup'
+import {
   Download, Upload, HardDrive, Trash2, Database,
   FileJson, Info, CheckCircle2,
 } from 'lucide-react'
-
-const BACKUP_KEY = 'bakery.last_backup'
 
 const KEY_TABLES = [
   'sales', 'sale_items', 'purchases', 'purchase_items', 'products', 'customers',
@@ -23,37 +24,10 @@ const KEY_TABLES = [
   'production_batches', 'recipes', 'businesses', 'audit_logs',
 ] as const
 
-const BACKUP_SHAPE = { app: 'almoutmag-bakery', kind: 'full-backup' } as const
-
-interface BackupFile {
-  app: string
-  kind: string
-  schema_version: number
-  exported_at: string
-  tables: Record<string, Record<string, unknown>[]>
-}
-
 function humanSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} بايت`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} ك.ب`
   return `${(bytes / (1024 * 1024)).toFixed(1)} م.ب`
-}
-
-function stamp(): string {
-  const d = new Date()
-  const p = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`
-}
-
-function downloadBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 4000)
 }
 
 export default function BackupCenter() {
@@ -69,7 +43,7 @@ export default function BackupCenter() {
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    setLastBackup(localStorage.getItem(BACKUP_KEY))
+    setLastBackup(lastBackupAt())
     void navigator.storage?.estimate?.().then((est) => {
       setStorage({
         used: humanSize(est.usage ?? 0),
@@ -97,20 +71,8 @@ export default function BackupCenter() {
   const doExport = async () => {
     setExporting(true)
     try {
-      const tables: Record<string, Record<string, unknown>[]> = {}
-      for (const t of db.tables) {
-        tables[t.name] = await t.toArray()
-      }
-      const payload: BackupFile = {
-        ...BACKUP_SHAPE,
-        schema_version: db.verno,
-        exported_at: new Date().toISOString(),
-        tables,
-      }
-      const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' })
-      downloadBlob(blob, `almoutmag-backup-${stamp()}.json`)
-      const now = new Date().toISOString()
-      localStorage.setItem(BACKUP_KEY, now)
+      await exportBackupFile()
+      const now = lastBackupAt()
       setLastBackup(now)
       toast.success('تم تنزيل النسخة الاحتياطية — احتفظ بها في مكان آمن')
     } catch (e) {
@@ -124,8 +86,8 @@ export default function BackupCenter() {
   const onPickFile = async (file: File) => {
     try {
       setImportBusy(true)
-      const parsed = JSON.parse(await file.text()) as BackupFile
-      if (parsed?.app !== BACKUP_SHAPE.app || parsed?.kind !== BACKUP_SHAPE.kind || typeof parsed?.tables !== 'object' || !parsed.tables) {
+      const parsed = parseBackup(await file.text())
+      if (!parsed) {
         toast.error('الملف ليس نسخة احتياطية صالحة لهذا النظام.')
         return
       }
@@ -141,13 +103,7 @@ export default function BackupCenter() {
   const doImport = async (backup: BackupFile) => {
     setImportBusy(true)
     try {
-      await db.transaction('rw', db.tables, async () => {
-        for (const t of db.tables) {
-          await t.clear()
-          const rows = backup.tables[t.name]
-          if (Array.isArray(rows) && rows.length > 0) await t.bulkPut(rows)
-        }
-      })
+      await restoreBackup(backup)
       toast.success('تمت الاستعادة بنجاح — جارٍ إعادة التحميل...')
       setTimeout(() => window.location.reload(), 800)
     } catch (e) {
@@ -159,11 +115,7 @@ export default function BackupCenter() {
   // ---------- التصفير ----------
   const doWipe = async () => {
     try {
-      await db.transaction('rw', db.tables, async () => {
-        for (const t of db.tables) await t.clear()
-      })
-      localStorage.removeItem(BACKUP_KEY)
-      localStorage.removeItem('bakery.backup_reminder_dismissed')
+      await wipeAllData()
       toast.success('تم مسح كل البيانات — إعادة التحميل...')
       setTimeout(() => window.location.reload(), 800)
     } catch (e) {

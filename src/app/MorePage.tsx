@@ -1,11 +1,10 @@
-/** صفحة "المزيد" — قائمة كاملة للوحدات على الموبايل (بند 49) */
+/** صفحة "المزيد" — قائمة كاملة للوحدات على الموبايل (بند 49) + تثبيت التطبيق على التلفون */
 import { Link } from 'react-router-dom'
 import {
   ReceiptText, Factory, Truck, Users, Wallet, FileText, Settings,
-  ScrollText, RefreshCw, Package, ChevronLeft, Car, HardDrive,
+  ScrollText, Package, ChevronLeft, Car, HardDrive, Smartphone,
 } from 'lucide-react'
 import { useAuthStore } from './authStore'
-import { SyncStatusBadge } from '@/components/ui/states'
 
 const ITEMS = [
   { to: '/purchases', label: 'المشتريات', desc: 'فواتير الشراء والدفعات', icon: ReceiptText, perm: 'purchases.view' },
@@ -20,8 +19,7 @@ const ITEMS = [
   { to: '/reports', label: 'التقارير', desc: '11 تقريراً مع تصدير CSV', icon: FileText, perm: 'reports.view' },
   { to: '/audit', label: 'سجل التدقيق', desc: 'كل التغييرات الحساسة', icon: ScrollText, perm: 'audit.view' },
   { to: '/settings/backup', label: 'النسخ الاحتياطية', desc: 'تصدير واستعادة بياناتك — مهم جداً', icon: HardDrive, perm: null },
-  { to: '/sync', label: 'مركز المزامنة', desc: 'العمليات المعلقة والفاشلة', icon: RefreshCw, perm: null },
-  { to: '/settings', label: 'الإعدادات', desc: 'النشاط والصلاحيات والوحدات', icon: Settings, perm: 'settings.manage' },
+  { to: '/settings', label: 'الإعدادات والأمان', desc: 'النشاط والرمز السري والوحدات', icon: Settings, perm: 'settings.manage' },
 ] as const
 
 export default function MorePage() {
@@ -30,10 +28,26 @@ export default function MorePage() {
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4">
         <h1 className="text-lg font-extrabold text-stone-900">المزيد</h1>
-        <SyncStatusBadge compact />
       </div>
+
+      {/* ثبّته على تلفونك — PWA */}
+      <div className="mb-4 flex items-start gap-3 rounded-xl border border-primary-200 bg-gradient-to-l from-primary-50 to-white p-4 shadow-card">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary-600 text-white">
+          <Smartphone className="size-5" />
+        </span>
+        <div className="min-w-0">
+          <h2 className="text-sm font-extrabold text-stone-900">ثبّته على تلفونك — يعمل كتطبيق</h2>
+          <p className="mt-1 text-2xs leading-relaxed text-stone-600">
+            افتح هذا الموقع من متصفح التلفون، ثم من قائمة المتصفح اختر
+            <b> «إضافة إلى الشاشة الرئيسية» </b>
+            (آيفون: مشاركة ← Add to Home Screen). سيعمل كتطبيق مستقل وبنفس الرمز السري،
+            وبياناته محفوظة على التلفون.
+          </p>
+        </div>
+      </div>
+
       <div className="grid gap-2">
         {visible.map((item) => (
           <Link
