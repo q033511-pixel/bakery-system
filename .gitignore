@@ -22,3 +22,9 @@ out/
 npm-debug.log*
 coverage/
 *.tsbuildinfo
+
+# desktop build artifacts
+desktop/node_modules/
+desktop/release/
+desktop/dist/
+dist-desktop/

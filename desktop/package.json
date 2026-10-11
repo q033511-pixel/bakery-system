@@ -1,0 +1,46 @@
+{
+  "name": "almoutmag-bakery",
+  "productName": "AlMoutmag Bakery",
+  "version": "8.0.0",
+  "description": "نظام إدارة المخبز — وضع محلي آمن، بياناتك على جهازك",
+  "author": "AlMoutmag",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "main.cjs",
+  "devDependencies": {
+    "electron": "31.7.7",
+    "electron-builder": "24.13.3"
+  },
+  "build": {
+    "appId": "com.almoutmag.bakery",
+    "productName": "AlMoutmag Bakery",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.cjs",
+      "dist/**/*",
+      "icon.ico"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "icon.ico",
+      "signAndEditExecutable": false
+    },
+    "portable": {
+      "artifactName": "AlMoutmag-Bakery-Portable.exe",
+      "unicode": true
+    },
+    "compression": "maximum"
+  },
+  "dependencies": {
+    "png2icons": "^2.0.1"
+  }
+}
