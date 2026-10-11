@@ -14,6 +14,7 @@ import { todayISO } from '@/lib/dates'
 import { PageHeader } from '@/components/ui/navigation'
 import { Button, Card, Field, Input, Select, Textarea } from '@/components/ui/primitives'
 import { DateInput, MoneyInput, QuantityInput, SearchSelect } from '@/components/ui/inputs'
+import { QuickAddPartyModal } from '@/components/ui/QuickAddPartyModal'
 import { useAuthStore } from '@/app/authStore'
 import type { PaymentMethod, PaymentType, Product } from '@/types'
 
@@ -57,6 +58,7 @@ export default function PurchaseForm() {
   const [lines, setLines] = useState<Line[]>([])
   const [discount, setDiscount] = useState<number | null>(0)
   const [saving, setSaving] = useState(false)
+  const [addSupplierOpen, setAddSupplierOpen] = useState(false)
   const lineSeq = useRef(0)
 
   const unitById = useMemo(() => new Map(units.map((u) => [u.id, u])), [units])
@@ -162,7 +164,16 @@ export default function PurchaseForm() {
       {/* المورد + المستودع + التاريخ */}
       <Card className="mb-3 space-y-3 p-4">
         <Field label="المورد" required hint="المورد مسؤول عن دفع المبالغ الآجلة لاحقاً">
-          <SearchSelect options={supplierOptions} value={supplierId} onChange={setSupplierId} placeholder="اختر المورد..." emptyText="لا يوجد موردون" />
+          <SearchSelect
+            options={supplierOptions}
+            value={supplierId}
+            onChange={setSupplierId}
+            placeholder="اختر المورد..."
+            emptyText="لا يوجد موردون بعد"
+            emptyHint="أضف مورداً الآن دون مغادرة الفاتورة — سيُختار تلقائياً"
+            addNewLabel="إضافة مورد جديد"
+            onAddNew={() => setAddSupplierOpen(true)}
+          />
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="المستودع" required>
@@ -233,7 +244,8 @@ export default function PurchaseForm() {
                     value={l.product_id}
                     onChange={(v) => setLineProduct(l.key, v)}
                     placeholder="ابحث عن صنف..."
-                    emptyText="لا نتائج"
+                    emptyText={activeProducts.length === 0 ? 'لا توجد أصناف بعد' : 'كل الأصناف مستخدمة في الفاتورة'}
+                    emptyHint={activeProducts.length === 0 ? 'أضف منتجاتك أولاً من صفحة المنتجات ثم عد لإكمال الفاتورة' : undefined}
                   />
                   <div className="flex items-center gap-2">
                     <div className="w-28">
@@ -281,6 +293,14 @@ export default function PurchaseForm() {
           حفظ فاتورة الشراء
         </Button>
       </Card>
+
+      {/* إضافة مورد سريعة من داخل الفاتورة */}
+      <QuickAddPartyModal
+        kind="supplier"
+        open={addSupplierOpen}
+        onClose={() => setAddSupplierOpen(false)}
+        onCreated={(id) => setSupplierId(id)}
+      />
     </div>
   )
 }

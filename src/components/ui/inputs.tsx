@@ -95,12 +95,17 @@ export interface SearchSelectOption {
   sublabel?: string
 }
 
-export function SearchSelect({ options, value, onChange, placeholder = 'ابحث...', emptyText = 'لا نتائج', disabled }: {
+export function SearchSelect({ options, value, onChange, placeholder = 'ابحث...', emptyText = 'لا نتائج', emptyHint, addNewLabel, onAddNew, disabled }: {
   options: SearchSelectOption[]
   value: string | null
   onChange: (v: string | null) => void
   placeholder?: string
   emptyText?: string
+  /** شرح يظهر تحت emptyText عندما تكون القائمة فارغة تماماً (ليس مجرد بحث بلا نتائج) */
+  emptyHint?: string
+  /** زر «＋ إضافة» أسفل القائمة — يتيح إضافة عنصر جديد دون مغادرة النموذج */
+  addNewLabel?: string
+  onAddNew?: () => void
   disabled?: boolean
 }) {
   const [open, setOpen] = useState(false)
@@ -144,7 +149,16 @@ export function SearchSelect({ options, value, onChange, placeholder = 'ابحث
               />
             </div>
             <div className="max-h-64 overflow-y-auto p-1">
-              {filtered.length === 0 && <p className="px-3 py-6 text-center text-sm text-stone-400">{emptyText}</p>}
+              {filtered.length === 0 && (
+                options.length === 0 ? (
+                  <div className="flex flex-col items-center gap-1 px-3 py-8 text-center">
+                    <p className="text-sm font-bold text-stone-500">{emptyText}</p>
+                    {emptyHint && <p className="max-w-[16rem] text-2xs leading-5 text-stone-400">{emptyHint}</p>}
+                  </div>
+                ) : (
+                  <p className="px-3 py-6 text-center text-sm text-stone-400">لا نتائج للبحث</p>
+                )
+              )}
               {filtered.map((o) => (
                 <button
                   key={o.value}
@@ -157,6 +171,16 @@ export function SearchSelect({ options, value, onChange, placeholder = 'ابحث
                 </button>
               ))}
             </div>
+            {onAddNew && addNewLabel && (
+              <button
+                type="button"
+                onClick={() => { setOpen(false); onAddNew() }}
+                className="flex w-full items-center justify-center gap-1.5 border-t border-stone-100 py-2.5 text-xs font-extrabold text-primary-700 transition hover:bg-primary-50"
+              >
+                <span className="flex size-4 items-center justify-center rounded-full bg-primary-600 text-[10px] leading-none text-white">+</span>
+                {addNewLabel}
+              </button>
+            )}
             {value && (
               <button
                 type="button"

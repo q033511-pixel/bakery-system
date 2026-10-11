@@ -14,6 +14,7 @@ import { todayISO } from '@/lib/dates'
 import { PageHeader } from '@/components/ui/navigation'
 import { Button, Card, Field, Input, Select } from '@/components/ui/primitives'
 import { MoneyInput, SearchSelect } from '@/components/ui/inputs'
+import { QuickAddPartyModal } from '@/components/ui/QuickAddPartyModal'
 import { useAuthStore } from '@/app/authStore'
 import { stockHint } from './stockHint'
 import type { PaymentType, Product, Unit } from '@/types'
@@ -38,6 +39,7 @@ export default function QuickSale() {
   const warehouses = useLiveQuery(async () => lookups.warehouses(), [], [])
 
   const [customerId, setCustomerId] = useState<string | null>(null)
+  const [addCustomerOpen, setAddCustomerOpen] = useState(false)
   const [warehouseId, setWarehouseId] = useState<string | null>(null)
   const [lines, setLines] = useState<Line[]>([])
   const [discount, setDiscount] = useState<number | null>(0)
@@ -142,7 +144,16 @@ export default function QuickSale() {
       {/* العميل + المستودع */}
       <Card className="mb-3 space-y-3 p-4">
         <Field label="العميل" hint="اتركه فارغاً للبيع النقدي المباشر">
-          <SearchSelect options={customerOptions} value={customerId} onChange={setCustomerId} placeholder="عميل نقدي / اختر عميلاً..." />
+          <SearchSelect
+            options={customerOptions}
+            value={customerId}
+            onChange={setCustomerId}
+            placeholder="عميل نقدي / اختر عميلاً..."
+            emptyText="لا يوجد عملاء بعد"
+            emptyHint="للبيع الآجل أضف عميلاً الآن — سيُختار تلقائياً دون مغادرة الفاتورة"
+            addNewLabel="إضافة عميل جديد"
+            onAddNew={() => setAddCustomerOpen(true)}
+          />
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="المستودع" required>
@@ -262,6 +273,14 @@ export default function QuickSale() {
           حفظ البيع
         </Button>
       </Card>
+
+      {/* إضافة عميل سريعة من داخل البيع السريع */}
+      <QuickAddPartyModal
+        kind="customer"
+        open={addCustomerOpen}
+        onClose={() => setAddCustomerOpen(false)}
+        onCreated={(id) => setCustomerId(id)}
+      />
     </div>
   )
 }

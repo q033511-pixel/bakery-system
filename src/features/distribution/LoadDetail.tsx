@@ -19,6 +19,7 @@ import { fmtDate, todayISO } from '@/lib/dates'
 import { PageHeader } from '@/components/ui/navigation'
 import { Button, Card, Field, Input, Select, StatusBadge, Textarea } from '@/components/ui/primitives'
 import { MoneyInput, QuantityInput, SearchSelect } from '@/components/ui/inputs'
+import { QuickAddPartyModal } from '@/components/ui/QuickAddPartyModal'
 import { Modal } from '@/components/ui/overlays'
 import { DataTable } from '@/components/ui/DataTable'
 import { LoadingState, ErrorState } from '@/components/ui/states'
@@ -126,6 +127,7 @@ export default function LoadDetail() {
   // ----- حالة المودالات -----
   const [deliverOpen, setDeliverOpen] = useState(false)
   const [customerId, setCustomerId] = useState<string | null>(null)
+  const [addCustomerOpen, setAddCustomerOpen] = useState(false)
   const [deliveryProductId, setDeliveryProductId] = useState<string | null>(null)
   const [deliveryQty, setDeliveryQty] = useState<number | null>(null)
   const [unitPrice, setUnitPrice] = useState<number | null>(null)
@@ -417,7 +419,16 @@ export default function LoadDetail() {
       <Modal open={deliverOpen} onClose={() => setDeliverOpen(false)} title="تسجيل بيع من الحمولة">
         <div className="space-y-3">
           <Field label="العميل" required>
-            <SearchSelect options={customerOptions} value={customerId} onChange={setCustomerId} placeholder="اختر عميلاً..." emptyText="لا يوجد عملاء" />
+            <SearchSelect
+              options={customerOptions}
+              value={customerId}
+              onChange={setCustomerId}
+              placeholder="اختر عميلاً..."
+              emptyText="لا يوجد عملاء بعد"
+              emptyHint="أضف عميلاً الآن دون إغلاق نافذة البيع — سيُختار تلقائياً"
+              addNewLabel="إضافة عميل جديد"
+              onAddNew={() => setAddCustomerOpen(true)}
+            />
           </Field>
           <Field label="الصنف (من المحمولات)" required>
             <Select value={deliveryProductId ?? ''} onChange={(e) => pickDeliveryProduct(e.target.value || null)}>
@@ -450,6 +461,14 @@ export default function LoadDetail() {
           </Button>
         </div>
       </Modal>
+
+      {/* إضافة عميل سريعة فوق نافذة البيع */}
+      <QuickAddPartyModal
+        kind="customer"
+        open={addCustomerOpen}
+        onClose={() => setAddCustomerOpen(false)}
+        onCreated={(id) => setCustomerId(id)}
+      />
 
       {/* مودال تسجيل مرتجع */}
       <Modal open={returnOpen} onClose={() => setReturnOpen(false)} title="تسجيل مرتجع إلى الحمولة">

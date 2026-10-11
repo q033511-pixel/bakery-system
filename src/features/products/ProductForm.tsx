@@ -49,6 +49,16 @@ export default function ProductForm() {
     }
   }, [product, hydrated])
 
+  // افتراضي حقيقي للوحدة في وضع الإضافة: القائمة تعرض أول وحدة بصرياً — يجب أن تطابقها الحالة
+  // (بدون هذا كان الحفظ يُرفض برسالة «اختر الوحدة» رغم ظهور وحدة مختارة)
+  useEffect(() => {
+    if (!isEdit && baseUnit === '' && units.length > 0) {
+      const kg = units.find((u) => u.symbol === 'كغ' || u.name.includes('كيلو'))
+      const fallback = kg ?? units[0]
+      if (fallback) setBaseUnit(fallback.id)
+    }
+  }, [isEdit, baseUnit, units])
+
   /** كود تلقائي متسلسل P-0001 */
   async function nextProductCode(): Promise<string> {
     const rows = await db.products.where('business_id').equals(businessId).toArray()
