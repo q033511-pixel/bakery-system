@@ -3,7 +3,7 @@ chcp 65001 >nul
 title حذف النسخة القديمة وتنصيب الجديدة — نظام إدارة المخبز
 echo ==============================================================
 echo    نظام إدارة المخبز — المُطّعِم
-echo    أداة: حذف النسخة القديمة المعلقة + تنصيب أحدث نسخة (8.1.1)
+echo    أداة: حذف النسخة القديمة المعلقة + تنصيب أحدث نسخة (8.1.2)
 echo ==============================================================
 echo.
 echo   هذه الأداة ستقوم بالتالي:
@@ -39,10 +39,10 @@ echo       تم الحذف.
 
 echo [4/5] تحميل النسخة الجديدة — حجم الملف حوالي 70 ميجابايت،
 echo       انتظر حتى يمتلئ شريط التقدم ولا تغلق النافذة...
-set "EXEURL=https://github.com/q033511-pixel/bakery-system/releases/download/v8.1.1/AlMoutmag-Bakery-Portable.exe"
+set "EXEURL=https://github.com/q033511-pixel/bakery-system/releases/download/v8.1.2/AlMoutmag-Bakery-Portable.exe"
 set "EXE=C:\almoutmag\نظام-إدارة-المخبز.exe"
 curl.exe -L --fail --retry 3 --progress-bar --output "%EXE%" "%EXEURL%"
-powershell -NoProfile -Command "$exe='C:\almoutmag\نظام-إدارة-المخبز.exe'; $ok=$false; if(Test-Path -LiteralPath $exe){ $ok=((Get-Item -LiteralPath $exe).Length -gt 50000000) }; if(-not $ok){ [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; $ProgressPreference='SilentlyContinue'; try { Invoke-WebRequest -Uri 'https://github.com/q033511-pixel/bakery-system/releases/download/v8.1.1/AlMoutmag-Bakery-Portable.exe' -OutFile $exe -UseBasicParsing } catch {}; if(Test-Path -LiteralPath $exe){ $ok=((Get-Item -LiteralPath $exe).Length -gt 50000000) } }; Unblock-File -LiteralPath $exe -ErrorAction SilentlyContinue; if($ok){ exit 0 } else { exit 1 }"
+powershell -NoProfile -Command "$exe='C:\almoutmag\نظام-إدارة-المخبز.exe'; $ok=$false; if(Test-Path -LiteralPath $exe){ $ok=((Get-Item -LiteralPath $exe).Length -gt 50000000) }; if(-not $ok){ [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; $ProgressPreference='SilentlyContinue'; try { Invoke-WebRequest -Uri 'https://github.com/q033511-pixel/bakery-system/releases/download/v8.1.2/AlMoutmag-Bakery-Portable.exe' -OutFile $exe -UseBasicParsing } catch {}; if(Test-Path -LiteralPath $exe){ $ok=((Get-Item -LiteralPath $exe).Length -gt 50000000) } }; Unblock-File -LiteralPath $exe -ErrorAction SilentlyContinue; if($ok){ exit 0 } else { exit 1 }"
 if errorlevel 1 goto :download_fail
 echo       تم التحميل والفحص بنجاح.
 
@@ -52,7 +52,7 @@ start "" "%EXE%"
 
 echo.
 echo ==============================================================
-echo   تم! النسخة الجديدة 8.1.1 نُصبت وفتحت الآن.
+echo   تم! النسخة الجديدة 8.1.2 نُصبت وفتحت الآن.
 echo.
 echo   - اختصار «نظام إدارة المخبز» أصبح على سطح المكتب
 echo   - كل بياناتك القديمة موجودة كما هي (لم تُلمس)

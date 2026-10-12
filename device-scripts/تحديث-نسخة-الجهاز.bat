@@ -3,7 +3,7 @@ chcp 65001 >nul
 title تحديث تطبيق الويندوز — نظام إدارة المخبز
 echo ==============================================================
 echo    تحديث تطبيق الويندوز (EXE) إلى أحدث إصدار
-echo    الإصدار الجديد: 8.1.1
+echo    الإصدار الجديد: 8.1.2
 echo ==============================================================
 echo.
 echo  ماذا سيفعل:
@@ -32,9 +32,9 @@ if not exist "C:\almoutmag" mkdir "C:\almoutmag"
 echo [2/4] أخذ نسخة احتياطية من بياناتك...
 powershell -NoProfile -Command "$stamp=Get-Date -Format 'yyyyMMdd-HHmmss'; $dest=('C:\almoutmag\نسخة-احتياطية-من-بياناتك-' + $stamp); $found=$false; Get-ChildItem -LiteralPath $env:APPDATA -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -like 'AlMoutmag*' } | ForEach-Object { $found=$true; Copy-Item -LiteralPath $_.FullName -Destination $dest -Recurse -Force -ErrorAction SilentlyContinue }; if($found){ Write-Host '      تم حفظ نسخة احتياطية في:' $dest } else { Write-Host '      لا يوجد مجلد بيانات بعد — نتجاوز' }"
 
-echo [3/4] تحميل الإصدار 8.1.1 — انتظر حتى يمتلئ شريط التقدم...
-curl.exe -L --fail --retry 3 --progress-bar --output "C:\almoutmag\نظام-إدارة-المخبز.exe" "https://github.com/q033511-pixel/bakery-system/releases/download/v8.1.1/AlMoutmag-Bakery-Portable.exe"
-powershell -NoProfile -Command "$exe='C:\almoutmag\نظام-إدارة-المخبز.exe'; $ok=$false; if(Test-Path -LiteralPath $exe){ $ok=((Get-Item -LiteralPath $exe).Length -gt 50000000) }; if(-not $ok){ [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; $ProgressPreference='SilentlyContinue'; try { Invoke-WebRequest -Uri 'https://github.com/q033511-pixel/bakery-system/releases/download/v8.1.1/AlMoutmag-Bakery-Portable.exe' -OutFile $exe -UseBasicParsing } catch {}; if(Test-Path -LiteralPath $exe){ $ok=((Get-Item -LiteralPath $exe).Length -gt 50000000) } }; Unblock-File -LiteralPath $exe -ErrorAction SilentlyContinue; if($ok){ exit 0 } else { exit 1 }"
+echo [3/4] تحميل الإصدار 8.1.2 — انتظر حتى يمتلئ شريط التقدم...
+curl.exe -L --fail --retry 3 --progress-bar --output "C:\almoutmag\نظام-إدارة-المخبز.exe" "https://github.com/q033511-pixel/bakery-system/releases/download/v8.1.2/AlMoutmag-Bakery-Portable.exe"
+powershell -NoProfile -Command "$exe='C:\almoutmag\نظام-إدارة-المخبز.exe'; $ok=$false; if(Test-Path -LiteralPath $exe){ $ok=((Get-Item -LiteralPath $exe).Length -gt 50000000) }; if(-not $ok){ [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; $ProgressPreference='SilentlyContinue'; try { Invoke-WebRequest -Uri 'https://github.com/q033511-pixel/bakery-system/releases/download/v8.1.2/AlMoutmag-Bakery-Portable.exe' -OutFile $exe -UseBasicParsing } catch {}; if(Test-Path -LiteralPath $exe){ $ok=((Get-Item -LiteralPath $exe).Length -gt 50000000) } }; Unblock-File -LiteralPath $exe -ErrorAction SilentlyContinue; if($ok){ exit 0 } else { exit 1 }"
 if errorlevel 1 goto :download_fail
 echo       تم التحميل والفحص بنجاح.
 
@@ -44,7 +44,7 @@ start "" "C:\almoutmag\نظام-إدارة-المخبز.exe"
 
 echo.
 echo ==============================================================
-echo   تم التحديث! التطبيق الآن أحدث إصدار (8.1.1).
+echo   تم التحديث! التطبيق الآن أحدث إصدار (8.1.2).
 echo.
 echo   - كل بياناتك القديمة موجودة كما هي (لم تُلمس)
 echo   - إن سألك ويندوز عند أول تشغيل: اضغط «معلومات إضافية»
