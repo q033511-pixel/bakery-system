@@ -1,5 +1,5 @@
 /** حقول متخصصة: مال، كمية، تاريخ، بحث اختيار — مع تحقق آمن (بند 122/123) */
-import { useMemo, useRef, useState, type InputHTMLAttributes } from 'react'
+import { useEffect, useMemo, useRef, useState, type InputHTMLAttributes } from 'react'
 import { Search, X, ChevronDown } from 'lucide-react'
 import { formatMoney, parsePositive } from '@/lib/money'
 import { inputBaseClass } from './primitives'
@@ -112,6 +112,27 @@ export function SearchSelect({ options, value, onChange, placeholder = 'ابحث
   const [query, setQuery] = useState('')
   const boxRef = useRef<HTMLDivElement>(null)
 
+  // إغلاق موثوق في كل الحالات: مستمع على مستوى المستند بمرحلة الالتقاط
+  // (يعمل حتى لو كان هناك طبقات/مودالات/تحويلات CSS فوق القائمة) + مفتاح Esc.
+  // هذا بديل عن الطبقة الشفافة fixed inset-0 التي تنكسر إذا كان لأحد الأسلاف
+  // transform/filter — وكانت سبب «القائمة لا تسكر» عند الزبون.
+  useEffect(() => {
+    if (!open) return
+    function onPointerDown(e: PointerEvent) {
+      const t = e.target
+      if (boxRef.current && t instanceof Node && !boxRef.current.contains(t)) setOpen(false)
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('pointerdown', onPointerDown, true)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown, true)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open])
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return options.slice(0, 30)
@@ -136,7 +157,6 @@ export function SearchSelect({ options, value, onChange, placeholder = 'ابحث
 
       {open && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div className="absolute z-50 mt-1 w-full rounded-xl border border-stone-200 bg-white shadow-lg">
             <div className="relative border-b border-stone-100 p-2">
               <Search className="absolute right-4 top-1/2 size-4 -translate-y-1/2 text-stone-400" />
