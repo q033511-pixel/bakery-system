@@ -21,7 +21,11 @@ const queryClient = new QueryClient({
 registerAllOps()
 initSyncEngine()
 
-registerSW({ immediate: true })
+// تسجيل عامل الخدمة على الويب فقط — بروتوكول file:// في نسخة سطح المكتب لا يدعمه
+// وسيسقط التطبيق كله بـTypeError إن نُفّذ التسجيل هناك
+if (location.protocol === 'http:' || location.protocol === 'https:') {
+  registerSW({ immediate: true })
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

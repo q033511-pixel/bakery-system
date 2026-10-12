@@ -1,7 +1,7 @@
 {
   "name": "almoutmag-bakery",
   "productName": "AlMoutmag Bakery",
-  "version": "8.1.2",
+  "version": "8.1.3",
   "description": "نظام إدارة المخبز — قفل برمز سري 4 أرقام، بياناتك على جهازك",
   "author": "AlMoutmag",
   "license": "UNLICENSED",
@@ -24,6 +24,12 @@
     ],
     "win": {
       "target": [
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        },
         {
           "target": "portable",
           "arch": [
