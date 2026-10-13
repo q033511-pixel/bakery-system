@@ -56,6 +56,7 @@ const ReportView = lazy(() => import('@/features/reports/ReportView'))
 const AuditLogPage = lazy(() => import('@/features/audit/AuditLogPage'))
 const SettingsPage = lazy(() => import('@/features/settings/SettingsPage'))
 const BackupCenter = lazy(() => import('@/features/settings/BackupCenter'))
+const DataBridgePage = lazy(() => import('@/features/databridge/DataBridgePage'))
 const MorePage = lazy(() => import('@/app/MorePage'))
 
 function Guard({ children }: { children: React.ReactNode }) {
@@ -129,6 +130,7 @@ export default function App() {
 
             <Route path="settings" element={<SettingsPage />} />
             <Route path="settings/backup" element={<BackupCenter />} />
+            <Route path="databridge" element={<DataBridgePage />} />
             <Route path="more" element={<MorePage />} />
           </Route>
 

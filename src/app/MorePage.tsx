@@ -2,7 +2,7 @@
 import { Link } from 'react-router-dom'
 import {
   ReceiptText, Factory, Truck, Users, Wallet, FileText, Settings,
-  ScrollText, Package, ChevronLeft, Car, HardDrive, Smartphone,
+  ScrollText, Package, ChevronLeft, Car, HardDrive, Smartphone, ArrowLeftRight,
 } from 'lucide-react'
 import { useAuthStore } from './authStore'
 
@@ -19,6 +19,7 @@ const ITEMS = [
   { to: '/reports', label: 'التقارير', desc: '11 تقريراً مع تصدير CSV', icon: FileText, perm: 'reports.view' },
   { to: '/audit', label: 'سجل التدقيق', desc: 'كل التغييرات الحساسة', icon: ScrollText, perm: 'audit.view' },
   { to: '/settings/backup', label: 'النسخ الاحتياطية', desc: 'تصدير واستعادة بياناتك — مهم جداً', icon: HardDrive, perm: null },
+  { to: '/databridge', label: 'ناقل البيانات', desc: 'نقل بياناتك بين الموقع والتطبيق بملف واحد', icon: ArrowLeftRight, perm: null },
   { to: '/settings', label: 'الإعدادات والأمان', desc: 'النشاط والرمز السري والوحدات', icon: Settings, perm: 'settings.manage' },
 ] as const
 
