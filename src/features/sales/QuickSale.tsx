@@ -3,14 +3,15 @@
  * Mobile First: أصناف كأزرار +/-، أسعار تلقائية، حفظ بأوفر خطوات.
  * تعمل أوفلاين بالكامل: الأصناف والعملاء من الكاش المحلي، والحفظ عبر الطابور.
  */
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Plus, Minus, Trash2, Save, ShoppingCart, Banknote, Clock3 } from 'lucide-react'
+import { Plus, Minus, Trash2, Save, ShoppingCart, Banknote, Clock3, Tag } from 'lucide-react'
 import { lookups } from '@/services/lookups'
 import { salesService } from '@/services/operations'
 import { useToast } from '@/lib/toast'
 import { formatMoney, lineTotal, roundMoney, sumMoney } from '@/lib/money'
 import { todayISO } from '@/lib/dates'
+import { resolveUnitPrice, type PriceSource } from '@/lib/pricing'
 import { PageHeader } from '@/components/ui/navigation'
 import { Button, Card, Field, Input, Select } from '@/components/ui/primitives'
 import { MoneyInput, SearchSelect } from '@/components/ui/inputs'
@@ -27,6 +28,10 @@ interface Line {
   unit_symbol: string
   unit_price: number
   stock_qty: number | null
+  /** هل عدّل المستخدم السعر يدوياً؟ (التعديل اليدوي موثق ولا تُغيّره آلياً أسعار العميل) */
+  priceEdited?: boolean
+  /** مصدر السعر للعرض: قاعدة عميل خاصة / افتراضي */
+  priceSource?: PriceSource
 }
 
 export default function QuickSale() {
@@ -46,9 +51,39 @@ export default function QuickSale() {
   const [paymentType, setPaymentType] = useState<PaymentType>('CASH')
   const [search, setSearch] = useState('')
   const [saving, setSaving] = useState(false)
+  const [overCreditConfirm, setOverCreditConfirm] = useState(false)
+  const [overCreditMsg, setOverCreditMsg] = useState<string | null>(null)
 
   const unitById = useMemo(() => new Map(units.map((u: Unit) => [u.id, u])), [units])
   const defaultWarehouse = useMemo(() => warehouses.find((w) => w.is_default) ?? warehouses[0], [warehouses])
+
+  // أسعار العميل الخاصة — تُقرأ من القواعد وتُحل تلقائياً لكل سطر
+  const priceRules = useLiveQuery(
+    async () => (customerId ? await (await import('@/db/db')).db.customer_products.where('customer_id').equals(customerId).toArray() : []),
+    [customerId],
+    [],
+  )
+
+  /** إعادة حل أسعار كل السطور غير المعدلة يدوياً (عند تغيير العميل أو القواعد) */
+  useEffect(() => {
+    if (lines.length === 0) return
+    setLines((prev) =>
+      prev.map((l) => {
+        if (l.priceEdited) return l
+        const product = products.find((p: Product) => p.id === l.product_id)
+        if (!product) return l
+        const resolved = resolveUnitPrice({
+          customer_id: customerId ?? '',
+          product_id: l.product_id,
+          unit_id: l.unit_id,
+          rules: priceRules ?? [],
+          product_sale_price: Number(product.sale_price ?? 0),
+        })
+        return { ...l, unit_price: resolved.price, priceSource: resolved.source }
+      }),
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customerId, priceRules])
 
   const activeProducts = useMemo(
     () => products.filter((p: Product) => p.active && p.item_type === 'FINISHED_PRODUCT'),
@@ -71,6 +106,13 @@ export default function QuickSale() {
   function addProduct(p: Product) {
     const unit = p.sales_unit_id ?? p.base_unit_id
     const symbol = unitById.get(unit)?.symbol ?? ''
+    const resolved = resolveUnitPrice({
+      customer_id: customerId ?? '',
+      product_id: p.id,
+      unit_id: unit ?? null,
+      rules: priceRules ?? [],
+      product_sale_price: Number(p.sale_price ?? 0),
+    })
     setLines((prev) => {
       const existing = prev.find((l) => l.product_id === p.id && l.unit_id === unit)
       if (existing) {
@@ -80,7 +122,8 @@ export default function QuickSale() {
         ...prev,
         {
           product_id: p.id, name: p.name, quantity: 1, unit_id: unit, unit_symbol: symbol,
-          unit_price: p.sale_price, stock_qty: stockByProduct[p.id] ?? null,
+          unit_price: resolved.price, stock_qty: stockByProduct[p.id] ?? null,
+          priceEdited: false, priceSource: resolved.source,
         },
       ]
     })
@@ -112,7 +155,8 @@ export default function QuickSale() {
         payment_type: paymentType,
         payment_method: paymentType === 'CASH' ? 'CASH' : null,
         notes: null,
-      })
+        allow_over_credit: overCreditConfirm,
+      } as Parameters<typeof salesService.create>[0])
       if (res.offline) {
         toast.offline('تم حفظ البيع محلياً وسيتم مزامنته عند عودة الإنترنت.')
       } else if (res.duplicate) {
@@ -123,8 +167,15 @@ export default function QuickSale() {
       setLines([])
       setDiscount(0)
       setPaymentType('CASH')
+      setOverCreditConfirm(false)
+      setOverCreditMsg(null)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'حدث خطأ أثناء حفظ البيع.')
+      const msg = err instanceof Error ? err.message : 'حدث خطأ أثناء حفظ البيع.'
+      if (msg.includes('تجاوز حد الائتمان') && !overCreditConfirm) {
+        setOverCreditMsg(msg)
+      } else {
+        toast.error(msg)
+      }
     } finally {
       setSaving(false)
     }
@@ -170,6 +221,28 @@ export default function QuickSale() {
         </div>
         {paymentType === 'CREDIT' && !customerId && (
           <p className="rounded-lg bg-warning-50 px-3 py-2 text-2xs font-bold text-warning-700">البيع الآجل يتطلب اختيار عميل.</p>
+        )}
+        {overCreditMsg && (
+          <div className="rounded-lg bg-danger-50 px-3 py-2.5">
+            <p className="text-2xs font-extrabold text-danger-700">{overCreditMsg}</p>
+            <div className="mt-2 flex gap-2">
+              <Button size="sm" onClick={() => { setOverCreditConfirm(true); setOverCreditMsg(null); void save() }}>
+                تجاوز الحفظ مع تسجيل التجاوز في التدقيق
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setOverCreditMsg(null)}>إلغاء</Button>
+            </div>
+          </div>
+        )}
+        {overCreditMsg && (
+          <div className="rounded-lg bg-danger-50 px-3 py-2.5">
+            <p className="text-2xs font-extrabold text-danger-700">{overCreditMsg}</p>
+            <div className="mt-2 flex gap-2">
+              <Button size="sm" variant="danger" onClick={() => { setOverCreditConfirm(true); setOverCreditMsg(null); void save() }}>
+                تجاوز الحفظ مع تسجيل التجاوز في التدقيق
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setOverCreditMsg(null)}>إلغاء</Button>
+            </div>
+          </div>
         )}
       </Card>
 
@@ -240,10 +313,15 @@ export default function QuickSale() {
                   </div>
                   <span className="text-2xs font-bold text-stone-400">{l.unit_symbol}</span>
                   <div className="flex-1">
-                    <MoneyInput value={l.unit_price} onChange={(v) => updateLine(idx, { unit_price: v ?? 0 })} currencySymbol={currency} aria-label="سعر الوحدة" />
+                    <MoneyInput value={l.unit_price} onChange={(v) => updateLine(idx, { unit_price: v ?? 0, priceEdited: true })} currencySymbol={currency} aria-label="سعر الوحدة" />
                   </div>
                   <span className="w-20 text-end text-sm font-extrabold tabular-nums text-stone-900">{formatMoney(lineTotal(l.quantity, l.unit_price), currency)}</span>
                 </div>
+                {l.priceSource && l.priceSource !== 'PRODUCT_DEFAULT' && !l.priceEdited && (
+                  <p className="flex items-center gap-1 text-2xs font-bold text-primary-700">
+                    <Tag className="size-3" /> سعر خاص بهذا العميل — عدّله يدوياً إن لزم
+                  </p>
+                )}
                 {overStock && (
                   <p className="text-2xs font-bold text-warning-600">
                     تنبيه: الكمية أكبر من الرصيد المتاح {stock !== null ? `(${stock})` : ''} — سيتم رفض العملية إذا كانت سياسة المخزون السالب معطلة.

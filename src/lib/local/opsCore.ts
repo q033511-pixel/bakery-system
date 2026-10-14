@@ -314,6 +314,21 @@ async function create_sale(params: Record<string, unknown>): Promise<unknown> {
   const vTotal = vSubtotal - vDiscount
   const vDoc = await nextDocNumber('SAL')
 
+  // حد الائتمان — الذمم (تنبيه إجباري): البيع الآجل الذي يجعل الرصيد يتجاوز الحد يتطلب تأكيداً صريحاً
+  // (allow_over_credit=true من الواجهة بعد عرض تنبيه للمستخدم — لا تجاوز صامت أبداً)
+  if (vPayType === 'CREDIT' && vCustomer !== null) {
+    const c = await db.customers.get(vCustomer)
+    const vLimit = numVal(c?.credit_limit) ?? 0
+    if (vLimit > 0) {
+      const bal = await customerBalance(vCustomer)
+      if (bal + vTotal > vLimit && payload.allow_over_credit !== true) {
+        raise(
+          `تجاوز حد الائتمان: رصيد العميل ${roundN(bal, 2)} + هذه الفاتورة ${roundN(vTotal, 2)} يتجاوز الحد ${roundN(vLimit, 2)} — أكّد التجاوز للمتابعة.`,
+        )
+      }
+    }
+  }
+
   const vSaleId = uuid()
   await insertRow('sales', {
     id: vSaleId,
@@ -323,6 +338,7 @@ async function create_sale(params: Record<string, unknown>): Promise<unknown> {
     customer_id: vCustomer,
     warehouse_id: vWarehouse,
     sale_date: vSaleDate,
+    due_date: strVal(payload.due_date),
     subtotal: vSubtotal,
     discount: vDiscount,
     total: vTotal,
@@ -383,9 +399,27 @@ async function create_sale(params: Record<string, unknown>): Promise<unknown> {
 
   await writeAudit('CREATE_SALE', 'sale', vSaleId, 'CREATE', null, {
     doc_number: vDoc, total: vTotal, payment_type: vPayType,
+    ...(payload.allow_over_credit === true ? { credit_limit_override: true } : {}),
   })
 
   return { id: vSaleId, doc_number: vDoc, duplicate: false }
+}
+
+/** رصيد عميل المحلي = الافتتاحي المعتمد + مبيعات آجلة مؤكدة − تحصيلات (نفس v_customer_balances) */
+export async function customerBalance(customerId: string): Promise<number> {
+  const [sales, payments] = await Promise.all([
+    db.sales.where('customer_id').equals(customerId).toArray(),
+    db.customer_payments.where('customer_id').equals(customerId).toArray(),
+  ])
+  let bal = 0
+  for (const s of sales) {
+    if (s.status !== 'CONFIRMED' || s.payment_type !== 'CREDIT') continue
+    bal += Number(s.total ?? 0)
+  }
+  for (const p of payments) bal -= Number(p.amount ?? 0)
+  const c = await db.customers.get(customerId)
+  if (c?.opening_balance_approved === true) bal += Number(c.opening_balance ?? 0)
+  return bal
 }
 
 // إلغاء بيع (بند 38: VOID بدل الحذف)

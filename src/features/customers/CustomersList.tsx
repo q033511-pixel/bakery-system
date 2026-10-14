@@ -162,7 +162,14 @@ export default function CustomersList() {
         title="العملاء"
         subtitle="الأرصدة والمديونيات حسب كشف الحساب"
         backTo="/"
-        action={canManage ? <AddButton label="إضافة عميل" onClick={openAddModal} /> : undefined}
+        action={canManage ? (
+          <div className="flex gap-2">
+            <Link to="/customers/import" className="inline-flex h-10 items-center rounded-xl border border-stone-200 bg-white px-4 text-sm font-extrabold text-stone-700 transition hover:bg-stone-50">
+              استيراد من إكسل
+            </Link>
+            <AddButton label="إضافة عميل" onClick={openAddModal} />
+          </div>
+        ) : undefined}
       />
 
       {paymentHint && (

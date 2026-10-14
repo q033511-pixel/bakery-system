@@ -8,6 +8,7 @@
  * كل عملية مالية داخل db.transaction ذرية (بند 44) + operation_id idempotent (بند 39).
  */
 import { db, type LocalRow } from '@/db/db'
+import { addDaysISO } from '@/lib/pricing'
 import type { RpcHandler } from './rpc'
 import {
   assertPerm,
@@ -127,6 +128,7 @@ const TX_TABLES = [
   'cash_accounts', 'cash_transactions',
   'distribution_loads', 'distribution_items', 'distribution_deliveries', 'distribution_returns',
   'distribution_settlements', 'audit_logs', 'doc_sequences', 'processed_operations',
+  'customer_products', 'cash_closings',
 ]
 
 function inTx<T>(fn: () => Promise<T>): Promise<T> {
@@ -1207,13 +1209,15 @@ const get_customers_report: RpcHandler = async () => {
   }
   const out = customers.map((c) => {
     const totalSales = creditByCustomer.get(String(c.id)) ?? 0
-    const balance = totalSales - (paidByCustomer.get(String(c.id)) ?? 0)
+    const opening = c.opening_balance_approved === true ? num(c.opening_balance) : 0
+    const balance = totalSales - (paidByCustomer.get(String(c.id)) ?? 0) + opening
     return {
       customer_id: String(c.id),
       code: c.code ?? null,
       name: c.name ?? null,
       phone: c.phone ?? null,
       total_sales: totalSales,
+      opening_balance: opening,
       balance: roundN(balance, 2),
     }
   })
@@ -1296,8 +1300,289 @@ const get_profit_report: RpcHandler = async (params) => {
 }
 
 // ============================================================================
-// كشوف الحسابات (بند 15/19): Date | Type | Reference | Debit | Credit | Balance
+// أعمار الديون (get_receivables_aging) — نفس طريقة computeCustomerAging في src/lib/pricing.ts
 // ============================================================================
+const get_receivables_aging: RpcHandler = async (params) => {
+  const bid = getCtx().businessId
+  if (bid === null) return []
+  const asOf = String(params.p_as_of ?? '') || businessToday().slice(0, 10)
+  const customers = (await db.customers.where('business_id').equals(bid).toArray()) as LocalRow[]
+  const sales = (await db.sales.where('business_id').equals(bid).toArray()) as LocalRow[]
+  const payments = (await db.customer_payments.where('business_id').equals(bid).toArray()) as LocalRow[]
+
+  type Debt = { due: string; amount: number }
+  const out: Row[] = []
+  for (const c of customers) {
+    const cid = String(c.id)
+    const opening = c.opening_balance_approved === true ? Number(c.opening_balance ?? 0) : 0
+    const creditSales = sales
+      .filter((s) => String(s.customer_id ?? '') === cid && String(s.status ?? '') === 'CONFIRMED' && String(s.payment_type ?? '') === 'CREDIT')
+      .map((s) => ({ id: String(s.id), total: Number(s.total ?? 0), sale_date: String(s.sale_date ?? ''), due_date: (s.due_date ?? null) as string | null }))
+    const paidTotal = payments
+      .filter((p) => String(p.customer_id ?? '') === cid)
+      .reduce((sum, p) => sum + Number(p.amount ?? 0), 0)
+    const totalDebt = opening + creditSales.reduce((s, x) => s + Math.max(x.total, 0), 0)
+    let pool = roundN(totalDebt - paidTotal, 2)
+    if (pool <= 0) {
+      out.push({ customer_id: cid, code: c.code ?? null, name: c.name ?? null, balance: 0, current: 0, days_31_60: 0, days_61_90: 0, over_90: 0, oldest_due_date: null, over_limit: false })
+      continue
+    }
+    const debts: Debt[] = []
+    if (opening > 0) debts.push({ due: typeof c.opening_balance_date === 'string' ? c.opening_balance_date : asOf, amount: opening })
+    for (const s of creditSales) {
+      if (s.total <= 0) continue
+      const due = s.due_date ?? addDaysISO(s.sale_date, Number(c.payment_terms_days ?? 0) || 0)
+      debts.push({ due, amount: s.total })
+    }
+    debts.sort((a, b) => (a.due === b.due ? 0 : a.due < b.due ? -1 : 1))
+    let cur = 0, d1 = 0, d2 = 0, d3 = 0
+    let oldest: string | null = null
+    for (const d of debts) {
+      if (pool <= 0) break
+      const take = Math.min(pool, d.amount)
+      if (take <= 0) continue
+      if (oldest === null) oldest = d.due
+      const ageDays = Math.floor((Date.parse(asOf) - Date.parse(d.due)) / 86_400_000)
+      if (ageDays <= 30) cur = roundN(cur + take, 2)
+      else if (ageDays <= 60) d1 = roundN(d1 + take, 2)
+      else if (ageDays <= 90) d2 = roundN(d2 + take, 2)
+      else d3 = roundN(d3 + take, 2)
+      pool = roundN(pool - take, 2)
+    }
+    const limit = Number(c.credit_limit ?? 0)
+    out.push({
+      customer_id: cid, code: c.code ?? null, name: c.name ?? null, balance: roundN(totalDebt - paidTotal, 2),
+      current: cur, days_31_60: d1, days_61_90: d2, over_90: d3, oldest_due_date: oldest,
+      over_limit: limit > 0 && totalDebt - paidTotal > limit,
+    })
+  }
+  return out.sort((a, b) => Number(b.balance) - Number(a.balance))
+}
+
+// ============================================================================
+// أسعار العملاء الخاصة (customer_products)
+// ============================================================================
+const get_customer_prices: RpcHandler = async (params) => {
+  const bid = getCtx().businessId
+  if (bid === null) return []
+  const customerId = ns(params.p_customer)
+  const rows = customerId
+    ? await db.customer_products.where('customer_id').equals(customerId).toArray()
+    : await db.customer_products.where('business_id').equals(bid).toArray()
+  return rows
+    .filter((r) => String(r.business_id ?? '') === bid)
+    .sort((a, b) => String(a.created_at ?? '').localeCompare(String(b.created_at ?? '')))
+}
+
+const upsert_customer_price: RpcHandler = async (params) => {
+  return inTx(async () => {
+    const bid = await requireBusinessId()
+    await assertPerm('customers.manage')
+    const customerId = ns(params.p_customer) ?? raise('اختر العميل.')
+    const productId = ns(params.p_product) ?? raise('اختر الصنف.')
+    const price = nn(params.p_price)
+    if (price === null || price < 0) raise('السعر غير صحيح.')
+    const unitId = ns(params.p_unit)
+    const startDate = ns(params.p_start_date)
+    const endDate = ns(params.p_end_date)
+    if (startDate && endDate && endDate < startDate) raise('تاريخ النهاية قبل تاريخ البداية.')
+
+    const customer = await db.customers.get(customerId)
+    if (!customer || customer.business_id !== bid) raise('العميل غير موجود.')
+    const product = await db.products.get(productId)
+    if (!product || product.business_id !== bid) raise('الصنف غير موجود.')
+    if (unitId) {
+      const unit = await db.units.get(unitId)
+      if (!unit) raise('الوحدة غير صحيحة.')
+    }
+
+    // تفرد (عميل، صنف، وحدة): قاعدة الأساس أو قاعدة الوحدة — تحديث أو إنشاء
+    const existing = (await db.customer_products.where('customer_id').equals(customerId).toArray())
+      .find((r) => String(r.product_id) === productId && (r.unit_id ?? null) === unitId)
+    const now = nowIso()
+    if (existing) {
+      await db.customer_products.update(String(existing.id), {
+        price, start_date: startDate, end_date: endDate,
+        notes: ns(params.p_notes), updated_at: now,
+      })
+      await writeAudit('UPDATE_CUSTOMER_PRICE', 'customer_products', String(existing.id), 'UPDATE', null, { product: productId, price })
+      return { id: String(existing.id), updated: true }
+    }
+    const id = uuid()
+    await db.customer_products.put({
+      id, business_id: bid, customer_id: customerId, product_id: productId, unit_id: unitId,
+      price, start_date: startDate, end_date: endDate,
+      notes: ns(params.p_notes),
+      created_at: now, updated_at: now,
+    })
+    await writeAudit('CREATE_CUSTOMER_PRICE', 'customer_products', id, 'CREATE', null, { product: productId, price })
+    return { id, updated: false }
+  })
+}
+
+const delete_customer_price: RpcHandler = async (params) => {
+  return inTx(async () => {
+    const bid = await requireBusinessId()
+    await assertPerm('customers.manage')
+    const id = ns(params.p_id) ?? raise('معرّف القاعدة مطلوب.')
+    const rule = await db.customer_products.get(id)
+    if (!rule || rule.business_id !== bid) raise('القاعدة غير موجودة.')
+    await db.customer_products.delete(id)
+    await writeAudit('DELETE_CUSTOMER_PRICE', 'customer_products', id, 'DELETE', null, null)
+    return { id, deleted: true }
+  })
+}
+
+// ============================================================================
+// إقفال الصندوق اليومي — الرصيد المتوقع = بداية + داخل − خارج؛ الفرق = المعدود − المتوقع
+// ============================================================================
+// ============================================================================
+// استيراد دفاتر العملاء — أرصدة افتتاحية معتمدة (بلا فواتير ولا حركات مالية)
+// ============================================================================
+const create_customer_minimal: RpcHandler = async (params) => {
+  return inTx(async () => {
+    const bid = await requireBusinessId()
+    await assertPerm('customers.manage')
+    const name = ns(params.p_name) ?? raise('اسم العميل مطلوب.')
+    const dup = (await db.customers.where('business_id').equals(bid).toArray()).find((c) => String(c.name ?? '') === name)
+    if (dup) return { id: String(dup.id), existing: true }
+    const id = uuid()
+    await db.customers.put({
+      id, business_id: bid, code: 'CU-' + Date.now().toString(36).toUpperCase(),
+      name, phone: null, area: null, salesperson: null,
+      credit_limit: 0, payment_terms_days: 0,
+      opening_balance: 0, opening_balance_date: null, opening_balance_approved: false, opening_import_id: null,
+      notes: 'أُنشئ من مستورد الدفاتر', active: true, created_at: nowIso(), updated_at: nowIso(),
+    })
+    await writeAudit('CREATE_CUSTOMER_IMPORT', 'customers', id, 'CREATE', null, { name })
+    return { id, existing: false }
+  })
+}
+
+const apply_opening_balance: RpcHandler = async (params) => {
+  return inTx(async () => {
+    const bid = await requireBusinessId()
+    await assertPerm('customers.manage')
+    const customerId = ns(params.p_customer) ?? raise('اختر العميل.')
+    const amount = nn(params.p_amount)
+    if (amount === null || amount <= 0) raise('مبلغ الافتتاحي غير صحيح.')
+    const customer = await db.customers.get(customerId)
+    if (!customer || customer.business_id !== bid) raise('العميل غير موجود.')
+    const importId = ns(params.p_import_id) ?? raise('معرّف الاستيراد مطلوب.')
+    const date = ns(params.p_date)
+    await db.customers.update(customerId, {
+      opening_balance: amount,
+      opening_balance_date: date ?? businessToday().slice(0, 10),
+      opening_balance_approved: true,
+      opening_import_id: importId,
+      updated_at: nowIso(),
+    })
+    // سعر خاص مقترح — فقط إذا كان الصنف معروفاً بالاسم عند المستورد
+    const price = nn(params.p_suggested_price)
+    const productId = ns(params.p_product_id)
+    if (price !== null && price > 0 && productId) {
+      const product = await db.products.get(productId)
+      if (product && product.business_id === bid) {
+        const existing = (await db.customer_products.where('customer_id').equals(customerId).toArray())
+          .find((r) => String(r.product_id) === productId && r.unit_id == null)
+        const now = nowIso()
+        if (existing) {
+          await db.customer_products.update(String(existing.id), { price, updated_at: now })
+        } else {
+          await db.customer_products.put({
+            id: uuid(), business_id: bid, customer_id: customerId, product_id: productId, unit_id: null,
+            price, start_date: null, end_date: null, notes: 'من مستورد الدفاتر',
+            created_at: now, updated_at: now,
+          })
+        }
+      }
+    }
+    await writeAudit('APPLY_OPENING_BALANCE', 'customers', customerId, 'UPDATE', null, {
+      amount, import_id: importId, source: 'import_wizard',
+    })
+    return { customer_id: customerId, amount }
+  })
+}
+
+const undo_opening_balance: RpcHandler = async (params) => {
+  return inTx(async () => {
+    const bid = await requireBusinessId()
+    await assertPerm('customers.manage')
+    const importId = ns(params.p_import_id) ?? raise('معرّف الاستيراد مطلوب.')
+    const affected = (await db.customers.where('business_id').equals(bid).toArray())
+      .filter((c) => c.opening_import_id === importId)
+    for (const c of affected) {
+      await db.customers.update(String(c.id), {
+        opening_balance: 0, opening_balance_date: null,
+        opening_balance_approved: false, opening_import_id: null, updated_at: nowIso(),
+      })
+      await writeAudit('UNDO_OPENING_BALANCE', 'customers', String(c.id), 'UPDATE', null, { import_id: importId })
+    }
+    return { undone: affected.length }
+  })
+}
+
+const create_cash_closing: RpcHandler = async (params) => {
+  return inTx(async () => {
+    const bid = await requireBusinessId()
+    await assertPerm('expenses.manage')
+    const payload = (params.p_payload ?? {}) as Row
+    const opId = ns(payload.operation_id) ?? raise('operation_id مطلوب لكل عملية (منع التكرار).')
+    if (!(await registerOp(opId, 'CASH_CLOSING'))) {
+      const dup = await findDuplicateByOp('cash_closings', opId)
+      return { id: dup?.id ?? null, doc_number: dup?.doc_number ?? null, duplicate: true }
+    }
+    const accountId = ns(payload.cash_account_id) ?? raise('اختر حساب الصندوق.')
+    const date = ns(payload.closing_date) ?? businessToday().slice(0, 10)
+    const counted = nn(payload.counted_balance)
+    if (counted === null) raise('أدخل المبلغ الفعلي المعدود.')
+    const notes = ns(payload.notes)
+
+    const account = await db.cash_accounts.get(accountId)
+    if (!account || account.business_id !== bid) raise('حساب الصندوق غير صحيح.')
+
+    const dupDay = (await db.cash_closings.where('cash_account_id').equals(accountId).toArray())
+      .find((r) => String(r.closing_date ?? '') === date)
+    if (dupDay) raise(`صندوق ${String(account.name ?? '')} مُقفل مسبقاً بتاريخ ${date}.`)
+
+    let opening = 0
+    let totalIn = 0
+    let totalOut = 0
+    for (const t of await db.cash_transactions.where('cash_account_id').equals(accountId).toArray()) {
+      const d = String(t.tx_date ?? '').slice(0, 10)
+      const amt = Number(t.amount ?? 0)
+      if (d < date) opening += t.direction === 'IN' ? amt : -amt
+      else if (d === date) {
+        if (t.direction === 'IN') totalIn += amt
+        else totalOut += amt
+      }
+    }
+    const expected = roundN(opening + totalIn - totalOut, 2)
+    const variance = roundN(counted - expected, 2)
+    if (!notes && Math.abs(variance) >= 0.01) raise('يوجد فرق بين المعدود والمتوقع — اكتب سبب الفرق في الملاحظات.')
+
+    const id = uuid()
+    await db.cash_closings.put({
+      id, operation_id: opId, doc_number: `CLS-${date.replace(/-/g, '')}`, business_id: bid, cash_account_id: accountId, closing_date: date,
+      opening_balance: roundN(opening, 2), total_in: roundN(totalIn, 2), total_out: roundN(totalOut, 2),
+      expected_balance: expected, counted_balance: roundN(counted, 2), variance,
+      notes, created_by: getCtx().userId, created_at: nowIso(), updated_at: nowIso(),
+    })
+    await writeAudit('CASH_CLOSING', 'cash_closings', id, 'CREATE', null, {
+      date, account: accountId, expected, counted: roundN(counted, 2), variance,
+    })
+    return { id, expected_balance: expected, variance, doc_number: `CLS-${date.replace(/-/g, '')}`, duplicate: false }
+  })
+}
+
+const get_cash_closings: RpcHandler = async (_params) => {
+  const bid = getCtx().businessId
+  if (bid === null) return []
+  const rows = await db.cash_closings.where('business_id').equals(bid).toArray()
+  return rows.sort((a, b) => String(b.closing_date ?? '').localeCompare(String(a.closing_date ?? '')))
+}
+
+
 
 const get_customer_statement: RpcHandler = async (params) => {
   const bid = getCtx().businessId
@@ -1309,6 +1594,20 @@ const get_customer_statement: RpcHandler = async (params) => {
   const payments = (await db.customer_payments.where('business_id').equals(bid).toArray()) as LocalRow[]
   type Entry = { date: string; type: string; reference: string; debit: number; credit: number; notes: string | null }
   const entries: Entry[] = []
+
+  // الرصيد الافتتاحي المعتمد — أول صف في الكشف (بند الرصيد الافتتاحي المعتمد)
+  const customer = await db.customers.get(customerId)
+  const opening = customer?.opening_balance_approved === true ? roundN(Number(customer.opening_balance ?? 0), 2) : 0
+  if (opening !== 0 && customer) {
+    const oDate = typeof customer.opening_balance_date === 'string' ? customer.opening_balance_date : String(customer.created_at ?? '')
+    if (from === null || oDate >= from) {
+      entries.push({
+        date: oDate, type: 'رصيد افتتاحي', reference: 'OPENING',
+        debit: opening, credit: 0, notes: (customer.notes ?? null) as string | null,
+      })
+    }
+  }
+
   for (const s of sales) {
     if (String(s.customer_id ?? '') !== customerId) continue
     if (String(s.status ?? '') !== 'CONFIRMED') continue
@@ -1441,4 +1740,15 @@ export const opsExtra: Record<string, RpcHandler> = {
   get_customer_statement,
   get_supplier_statement,
   get_audit_logs,
+  // الذمم: أعمار الديون + أسعار العملاء الخاصة + إقفال الصندوق
+  get_receivables_aging,
+  get_customer_prices,
+  upsert_customer_price,
+  delete_customer_price,
+  create_cash_closing,
+  get_cash_closings,
+  // استيراد دفاتر العملاء
+  create_customer_minimal,
+  apply_opening_balance,
+  undo_opening_balance,
 }

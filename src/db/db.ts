@@ -83,6 +83,9 @@ class BakeryDB extends Dexie {
   app_settings!: Table<LocalRow, string>
   doc_sequences!: Table<LocalRow, [string, string, number]>
   processed_operations!: Table<LocalRow, string>
+  // v3 — التسعير الخاص بالعميل + الإقفال اليومي للصندوق
+  customer_products!: Table<LocalRow, string>
+  cash_closings!: Table<LocalRow, string>
 
   constructor() {
     super('bakery_system')
@@ -148,6 +151,11 @@ class BakeryDB extends Dexie {
       app_settings: 'business_id',
       doc_sequences: '[business_id+prefix+seq_year], business_id',
       processed_operations: 'operation_id, business_id',
+    })
+    // v3: التسعير الخاص بالعميل (uq منطقي بالتحقق في الكود) + إقفال الصندوق اليومي (فريد حساب+يوم بالتحقق)
+    this.version(3).stores({
+      customer_products: 'id, business_id, customer_id, product_id, [customer_id+product_id]',
+      cash_closings: 'id, business_id, &operation_id, cash_account_id, closing_date',
     })
   }
 }

@@ -5,10 +5,11 @@
 import { useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
-import { FileDown, HandCoins, TrendingUp, Scale } from 'lucide-react'
+import { FileDown, HandCoins, TrendingUp, Scale, Clock } from 'lucide-react'
 import { rpc } from '@/services/rpc'
 import { lookups } from '@/services/lookups'
 import { paymentsService } from '@/services/operations'
+import CustomerPricesCard from './CustomerPricesCard'
 import { useAuthStore } from '@/app/authStore'
 import { useToast } from '@/lib/toast'
 import { formatMoney, roundMoney, sumMoney } from '@/lib/money'
@@ -51,6 +52,16 @@ export default function CustomerDetail() {
   const statementQ = useQuery({
     queryKey: ['customer-statement', id],
     queryFn: () => rpc<LedgerRow[]>('get_customer_statement', { p_customer: id, p_from: null, p_to: null }),
+    enabled: id !== '',
+  })
+
+  // أعمار الديون + حد الائتمان (نفس دالة الخادم المعتمدة للتقرير)
+  const agingQ = useQuery({
+    queryKey: ['customer-aging', id],
+    queryFn: async () => {
+      const rows = await rpc<Record<string, unknown>[]>('get_receivables_aging', {})
+      return (rows ?? []).find((r) => String(r.customer_id) === id) ?? null
+    },
     enabled: id !== '',
   })
 
@@ -191,6 +202,35 @@ export default function CustomerDetail() {
           />
         </Card>
       )}
+
+      {/* أعمار الديون + حد الائتمان */}
+      {agingQ.data && (
+        <Card className="mb-3 p-4">
+          <div className="mb-3 flex items-center gap-2">
+            <Clock className="size-5 text-warning-600" />
+            <h2 className="text-base font-extrabold">أعمار الديون</h2>
+            {Number(agingQ.data.over_limit) === 1 && (
+              <span className="rounded-lg bg-danger-100 px-2 py-1 text-2xs font-extrabold text-danger-700">
+                تجاوز حد الائتمان
+              </span>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <StatCard title="غير متأخر (0-30)" value={formatMoney(Number(agingQ.data.current ?? 0), currency)} />
+            <StatCard title="متأخر 31-60" value={formatMoney(Number(agingQ.data.days_31_60 ?? 0), currency)} tone={Number(agingQ.data.days_31_60 ?? 0) > 0 ? 'warning' : 'default'} />
+            <StatCard title="متأخر 61-90" value={formatMoney(Number(agingQ.data.days_61_90 ?? 0), currency)} tone={Number(agingQ.data.days_61_90 ?? 0) > 0 ? 'warning' : 'default'} />
+            <StatCard title="متأخر +90" value={formatMoney(Number(agingQ.data.over_90 ?? 0), currency)} tone={Number(agingQ.data.over_90 ?? 0) > 0 ? 'danger' : 'default'} />
+          </div>
+          <p className="mt-2 text-2xs text-stone-500">
+            {agingQ.data.oldest_due_date ? `أقدم استحقاق: ${String(agingQ.data.oldest_due_date)}` : 'لا ديون قائمة'}
+            {Number(customer?.credit_limit ?? 0) > 0 && customer ? ` — حد الائتمان: ${formatMoney(Number(customer.credit_limit), currency)}` : ''}
+            {Number(customer?.payment_terms_days ?? 0) > 0 && customer ? ` — مدة السداد: ${customer.payment_terms_days} يوم` : ''}
+          </p>
+        </Card>
+      )}
+
+      {/* أسعار العميل الخاصة */}
+      <CustomerPricesCard customerId={id} />
 
       {/* كشف الحساب */}
       <div className="mb-2 flex items-center justify-between gap-2">

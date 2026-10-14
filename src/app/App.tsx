@@ -31,6 +31,7 @@ const PurchaseForm = lazy(() => import('@/features/purchases/PurchaseForm'))
 const PurchaseDetail = lazy(() => import('@/features/purchases/PurchaseDetail'))
 const CustomersList = lazy(() => import('@/features/customers/CustomersList'))
 const CustomerDetail = lazy(() => import('@/features/customers/CustomerDetail'))
+const ImportDebtsPage = lazy(() => import('@/features/customers/ImportDebtsPage'))
 const SuppliersList = lazy(() => import('@/features/suppliers/SuppliersList'))
 const SupplierDetail = lazy(() => import('@/features/suppliers/SupplierDetail'))
 const ProductsList = lazy(() => import('@/features/products/ProductsList'))
@@ -95,7 +96,8 @@ export default function App() {
             <Route path="purchases/:id" element={<PurchaseDetail />} />
 
             <Route path="customers" element={<CustomersList />} />
-            <Route path="customers/:id" element={<CustomerDetail />} />
+            <Route path="customers/import" element={<ImportDebtsPage />} />
+        <Route path="customers/:id" element={<CustomerDetail />} />
             <Route path="suppliers" element={<SuppliersList />} />
             <Route path="suppliers/:id" element={<SupplierDetail />} />
 

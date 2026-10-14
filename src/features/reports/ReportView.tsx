@@ -144,6 +144,18 @@ const REPORTS: ReportConfig[] = [
     ],
   },
   {
+    reportId: 'receivables_aging', title: 'أعمار الديون', fnName: 'get_receivables_aging', useDates: false,
+    columns: [
+      { key: 'name', header: 'العميل', className: 'font-bold' },
+      { key: 'balance', header: 'الرصيد', kind: 'money', className: 'font-bold' },
+      { key: 'current', header: 'غير متأخر (0-30)', kind: 'money' },
+      { key: 'days_31_60', header: 'متأخر 31-60', kind: 'money' },
+      { key: 'days_61_90', header: 'متأخر 61-90', kind: 'money' },
+      { key: 'over_90', header: 'متأخر +90', kind: 'money' },
+      { key: 'oldest_due_date', header: 'أقدم استحقاق', kind: 'date', hideOnMobile: true },
+    ],
+  },
+  {
     reportId: 'suppliers', title: 'أرصدة الموردين', fnName: 'get_suppliers_report', useDates: false,
     columns: [
       { key: 'code', header: 'الرمز', hideOnMobile: true },

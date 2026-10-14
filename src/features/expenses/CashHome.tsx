@@ -15,6 +15,7 @@ import { Card, Button, Badge, StatCard } from '@/components/ui/primitives'
 import { DateInput } from '@/components/ui/inputs'
 import { DataTable } from '@/components/ui/DataTable'
 import { LoadingState, ErrorState } from '@/components/ui/states'
+import CashClosingCard from './CashClosingCard'
 import { Info, Wallet, Landmark, Vault } from 'lucide-react'
 
 interface CashBalanceRow {
@@ -125,6 +126,9 @@ export default function CashHome() {
           ))}
         </div>
       )}
+
+      {/* إقفال اليوم — عدّ النقد وتسجيل الفرق */}
+      <CashClosingCard />
 
       <FilterBar>
         <div className="flex flex-wrap gap-1.5">

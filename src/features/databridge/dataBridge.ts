@@ -16,7 +16,7 @@ import { db } from '@/db/db'
 import { downloadBlob } from '@/lib/backup'
 
 /** إصدار التطبيق — يُختم في ملف النقل للتشخيص (تُحدَّث عند كل إصدار) */
-export const APP_VERSION = '8.1.4'
+export const APP_VERSION = '8.2.0'
 
 /** الجداول التشغيلية/التعريفية — تُصدَّر وتُستبدل عند الاستيراد */
 export const BRIDGE_TABLES = [

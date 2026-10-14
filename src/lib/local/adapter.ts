@@ -366,7 +366,7 @@ async function computeStockView(): Promise<QueryRow[]> {
   return rows
 }
 
-/** v_customer_balances: مبيعات آجلة مؤكدة - مدفوعات العميل */
+/** v_customer_balances: الافتتاحي المعتمد + مبيعات آجلة مؤكدة - مدفوعات العميل */
 async function computeCustomerBalances(): Promise<QueryRow[]> {
   const [customers, sales, payments] = await Promise.all([
     db.customers.toArray(),
@@ -388,13 +388,16 @@ async function computeCustomerBalances(): Promise<QueryRow[]> {
   }
   return customers.map((c) => {
     const totalSales = credit.get(String(c.id)) ?? 0
+    const opening = c.opening_balance_approved === true ? Number(c.opening_balance ?? 0) : 0
     return {
       customer_id: String(c.id),
       business_id: c.business_id ?? null,
       code: c.code ?? null,
       name: c.name ?? null,
       total_sales: totalSales,
-      balance: totalSales - (paid.get(String(c.id)) ?? 0),
+      opening_balance: opening,
+      credit_limit: Number(c.credit_limit ?? 0),
+      balance: totalSales - (paid.get(String(c.id)) ?? 0) + opening,
     }
   })
 }

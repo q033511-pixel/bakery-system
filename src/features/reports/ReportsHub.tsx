@@ -3,7 +3,7 @@
  */
 import { Link } from 'react-router-dom'
 import {
-  ShoppingCart, CalendarDays, ReceiptText, Package, ArrowLeftRight, Factory,
+  ShoppingCart, CalendarDays, ReceiptText, Package, ArrowLeftRight, Factory, Clock,
   Users, UserCheck, TrendingDown, Wallet, Truck, TrendingUp, ScrollText, ChevronLeft,
 } from 'lucide-react'
 import { useAuthStore } from '@/app/authStore'
@@ -24,6 +24,7 @@ const REPORTS: ReportCard[] = [
   { reportId: 'movements', title: 'حركات المخزون', desc: 'كل الإدخالات والإخراجات', icon: <ArrowLeftRight className="size-5" /> },
   { reportId: 'production', title: 'الإنتاج', desc: 'دفعات الإنتاج وتكلفة المواد', icon: <Factory className="size-5" /> },
   { reportId: 'customers', title: 'أرصدة العملاء', desc: 'المبيعات والمستحقات', icon: <Users className="size-5" /> },
+  { reportId: 'receivables_aging', title: 'أعمار الديون', desc: 'من متأخر ومن مستحق على كل عميل', icon: <Clock className="size-5" /> },
   { reportId: 'suppliers', title: 'أرصدة الموردين', desc: 'المشتريات والمستحقات', icon: <UserCheck className="size-5" /> },
   { reportId: 'expenses', title: 'المصروفات', desc: 'مجاميع المصروفات حسب الفئة', icon: <TrendingDown className="size-5" /> },
   { reportId: 'cash', title: 'حركة الصندوق', desc: 'كل القبض والصرف', icon: <Wallet className="size-5" /> },

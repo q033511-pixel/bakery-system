@@ -641,11 +641,15 @@ export interface CreateSaleInput {
   customer_id: string | null
   warehouse_id: string
   sale_date: string
+  /** تاريخ الاستحقاق (اختياري) — يستخدمه نظام أعمار الديون */
+  due_date?: string | null
   items: SaleLineInput[]
   discount: number
   payment_type: PaymentType
   payment_method: PaymentMethod | null
   notes: string | null
+  /** تأكيد صريح لتجاوز حد الائتمان بعد عرض التنبيه — يُسجل في التدقيق */
+  allow_over_credit?: boolean
 }
 
 export interface CreatePurchaseInput {
