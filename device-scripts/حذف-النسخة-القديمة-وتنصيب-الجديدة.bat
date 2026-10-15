@@ -3,7 +3,7 @@ chcp 65001 >nul
 title حذف النسخة القديمة وتنصيب الجديدة — نظام إدارة المخبز
 echo ==============================================================
 echo    نظام إدارة المخبز — المُطّعِم
-echo    أداة: حذف النسخة القديمة المعلقة + تنصيب أحدث نسخة (8.1.3)
+echo    أداة: حذف النسخة القديمة المعلقة + تنصيب أحدث نسخة (8.2.0)
 echo ==============================================================
 echo.
 echo   هذه الأداة ستقوم بالتالي:
@@ -39,10 +39,10 @@ echo       تم الحذف.
 
 echo [4/5] تحميل نسخة الويندوز الكاملة — حجم الملف حوالي 105 ميجابايت،
 echo       انتظر حتى يمتلئ شريط التقدم ولا تغلق النافذة...
-set "ZIPURL=https://github.com/q033511-pixel/bakery-system/releases/download/v8.1.4/AlMoutmag-Bakery-Windows.zip"
+set "ZIPURL=https://github.com/q033511-pixel/bakery-system/releases/download/v8.2.0/AlMoutmag-Bakery-Windows.zip"
 set "ZIP=C:\almoutmag\AlMoutmag-Bakery-Windows.zip"
 curl.exe -L --fail --retry 3 --progress-bar --output "%ZIP%" "%ZIPURL%"
-powershell -NoProfile -Command "$zip='C:\almoutmag\AlMoutmag-Bakery-Windows.zip'; $ok=$false; if(Test-Path -LiteralPath $zip){ $ok=((Get-Item -LiteralPath $zip).Length -gt 50000000) }; if(-not $ok){ [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; $ProgressPreference='SilentlyContinue'; try { Invoke-WebRequest -Uri 'https://github.com/q033511-pixel/bakery-system/releases/download/v8.1.4/AlMoutmag-Bakery-Windows.zip' -OutFile $zip -UseBasicParsing } catch {}; if(Test-Path -LiteralPath $zip){ $ok=((Get-Item -LiteralPath $zip).Length -gt 50000000) } }; Unblock-File -LiteralPath $zip -ErrorAction SilentlyContinue; if($ok){ exit 0 } else { exit 1 }"
+powershell -NoProfile -Command "$zip='C:\almoutmag\AlMoutmag-Bakery-Windows.zip'; $ok=$false; if(Test-Path -LiteralPath $zip){ $ok=((Get-Item -LiteralPath $zip).Length -gt 50000000) }; if(-not $ok){ [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; $ProgressPreference='SilentlyContinue'; try { Invoke-WebRequest -Uri 'https://github.com/q033511-pixel/bakery-system/releases/download/v8.2.0/AlMoutmag-Bakery-Windows.zip' -OutFile $zip -UseBasicParsing } catch {}; if(Test-Path -LiteralPath $zip){ $ok=((Get-Item -LiteralPath $zip).Length -gt 50000000) } }; Unblock-File -LiteralPath $zip -ErrorAction SilentlyContinue; if($ok){ exit 0 } else { exit 1 }"
 if errorlevel 1 goto :download_fail
 echo       تم التحميل بنجاح، الآن فك الضغط (دقيقة تقريباً)...
 
@@ -56,7 +56,7 @@ start "" "C:\almoutmag\app\AlMoutmag Bakery.exe"
 
 echo.
 echo ==============================================================
-echo   تم! النسخة الجديدة 8.1.3 نُصبت وفتحت الآن.
+echo   تم! النسخة الجديدة 8.2.0 نُصبت وفتحت الآن.
 echo.
 echo   - التطبيق أصبح يفتح بشكل صحيح (إصلاح مشكلة الشاشة البيضاء)
 echo   - اختصار «نظام إدارة المخبز» أصبح على سطح المكتب

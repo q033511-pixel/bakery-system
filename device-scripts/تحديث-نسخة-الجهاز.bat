@@ -3,7 +3,7 @@ chcp 65001 >nul
 title تحديث تطبيق الويندوز — نظام إدارة المخبز
 echo ==============================================================
 echo    تحديث تطبيق الويندوز (EXE) إلى أحدث إصدار
-echo    الإصدار الجديد: 8.1.4
+echo    الإصدار الجديد: 8.2.0
 echo ==============================================================
 echo.
 echo  ماذا سيفعل:
@@ -32,12 +32,12 @@ if not exist "C:\almoutmag" mkdir "C:\almoutmag"
 echo [2/4] أخذ نسخة احتياطية من بياناتك...
 powershell -NoProfile -Command "$stamp=Get-Date -Format 'yyyyMMdd-HHmmss'; $dest=('C:\almoutmag\نسخة-احتياطية-من-بياناتك-' + $stamp); $found=$false; Get-ChildItem -LiteralPath $env:APPDATA -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -like 'AlMoutmag*' } | ForEach-Object { $found=$true; Copy-Item -LiteralPath $_.FullName -Destination $dest -Recurse -Force -ErrorAction SilentlyContinue }; if($found){ Write-Host '      تم حفظ نسخة احتياطية في:' $dest } else { Write-Host '      لا يوجد مجلد بيانات بعد — نتجاوز' }"
 
-echo [3/4] تحميل الإصدار 8.1.4 — حجم الملف حوالي 105 ميجابايت،
+echo [3/4] تحميل الإصدار 8.2.0 — حجم الملف حوالي 105 ميجابايت،
 echo       انتظر حتى يمتلئ شريط التقدم ولا تغلق النافذة...
-set "ZIPURL=https://github.com/q033511-pixel/bakery-system/releases/download/v8.1.4/AlMoutmag-Bakery-Windows.zip"
+set "ZIPURL=https://github.com/q033511-pixel/bakery-system/releases/download/v8.2.0/AlMoutmag-Bakery-Windows.zip"
 set "ZIP=C:\almoutmag\AlMoutmag-Bakery-Windows.zip"
 curl.exe -L --fail --retry 3 --progress-bar --output "%ZIP%" "%ZIPURL%"
-powershell -NoProfile -Command "$zip='C:\almoutmag\AlMoutmag-Bakery-Windows.zip'; $ok=$false; if(Test-Path -LiteralPath $zip){ $ok=((Get-Item -LiteralPath $zip).Length -gt 50000000) }; if(-not $ok){ [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; $ProgressPreference='SilentlyContinue'; try { Invoke-WebRequest -Uri 'https://github.com/q033511-pixel/bakery-system/releases/download/v8.1.4/AlMoutmag-Bakery-Windows.zip' -OutFile $zip -UseBasicParsing } catch {}; if(Test-Path -LiteralPath $zip){ $ok=((Get-Item -LiteralPath $zip).Length -gt 50000000) } }; Unblock-File -LiteralPath $zip -ErrorAction SilentlyContinue; if($ok){ exit 0 } else { exit 1 }"
+powershell -NoProfile -Command "$zip='C:\almoutmag\AlMoutmag-Bakery-Windows.zip'; $ok=$false; if(Test-Path -LiteralPath $zip){ $ok=((Get-Item -LiteralPath $zip).Length -gt 50000000) }; if(-not $ok){ [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; $ProgressPreference='SilentlyContinue'; try { Invoke-WebRequest -Uri 'https://github.com/q033511-pixel/bakery-system/releases/download/v8.2.0/AlMoutmag-Bakery-Windows.zip' -OutFile $zip -UseBasicParsing } catch {}; if(Test-Path -LiteralPath $zip){ $ok=((Get-Item -LiteralPath $zip).Length -gt 50000000) } }; Unblock-File -LiteralPath $zip -ErrorAction SilentlyContinue; if($ok){ exit 0 } else { exit 1 }"
 if errorlevel 1 goto :download_fail
 echo       تم التحميل بنجاح، الآن فك الضغط (دقيقة تقريباً)...
 
@@ -51,7 +51,7 @@ start "" "C:\almoutmag\app\AlMoutmag Bakery.exe"
 
 echo.
 echo ==============================================================
-echo   تم التحديث! التطبيق الآن أحدث إصدار (8.1.3).
+echo   تم التحديث! التطبيق الآن أحدث إصدار (8.2.0).
 echo.
 echo   - التطبيق أصبح يفتح بشكل صحيح (إصلاح مشكلة الشاشة البيضاء)
 echo   - كل بياناتك القديمة موجودة كما هي (لم تُلمس)
