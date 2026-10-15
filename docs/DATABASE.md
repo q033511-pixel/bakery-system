@@ -2,15 +2,16 @@
 
 ## نظرة عامة
 
-PostgreSQL 15 عبر Supabase. الانتقال من قاعدة فارغة إلى نظام كامل عبر Migrations مرقمة versioned (بند 73):
+PostgreSQL 15 عبر Supabase — **تصميم جاهز، غير مفعّل في الإنتاج بعد**: بيئة v8.2.0 الحالية تعمل محلياً (IndexedDB عبر adapter يحاكي نفس المخطط والدوال حرفياً). الانتقال من قاعدة فارغة إلى نظام كامل عبر Migrations مرقمة versioned (بند 73):
 
 | الملف | المحتوى |
 |---|---|
-| `0001_schema.sql` | Enums + 40 جدول + قيود + فهارس |
-| `0002_functions.sql` | دوال المساعدة + 15 RPC معاملية + bootstrap |
+| `0001_schema.sql` | Enums + 42 جدول + قيود + فهارس |
+| `0002_functions.sql` | دوال المساعدة + RPC معاملية + bootstrap |
 | `0003_rls.sql` | تفعيل RLS على كل الجداول + السياسات |
-| `0004_views.sql` | Views + 14 دالة تقارير وكشوف |
+| `0004_views.sql` | Views + دوال تقارير وكشوف |
 | `0005_seed.sql` | بيانات تطوير فقط (لا إنتاج) |
+| `0006_customer_pricing_debt.sql` | **v8.2.0**: `customer_products` (سعر خاص لكل عميل×صنف×وحدة×مدة) + `cash_closings` (إقفال يومي) + أرصدة بالرصيد الافتتاحي + `get_receivables_aging` + `resolve_product_price` |
 
 ## الجداول الرئيسية
 

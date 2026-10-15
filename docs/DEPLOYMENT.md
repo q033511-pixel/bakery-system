@@ -1,5 +1,7 @@
 # النشر — DEPLOYMENT.md
 
+> **الوضع الحالي (v8.2.0):** الموقع منشور على GitHub Pages من هذا الـworkflow ويعمل **محلياً بدون Supabase** — متغيرات `VITE_SUPABASE_*` غير مستخدمة في الإنتاج الحالي (طبقة adapter المحلية تغطي كل العمليات). أقسام Supabase أدناه سارية عند قرار تفعيل المركزي فقط. النسخ الاحتياطي الفعلي اليوم = ناقل البيانات (JSON) → `BACKUP_RESTORE.md`.
+
 ## GitHub Pages عبر GitHub Actions
 
 الworkflow: `.github/workflows/deploy.yml` — يعمل عند push على `main`:
