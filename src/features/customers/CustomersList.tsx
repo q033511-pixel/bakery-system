@@ -142,6 +142,7 @@ export default function CustomersList() {
         salesperson: form.salesperson.trim() || null,
         credit_limit: form.credit_limit ?? 0,
         payment_terms_days: form.payment_terms_days ?? 0,
+        active: true,
         notes: form.notes.trim() || null,
       })
       if (error) throw new Error(error.message)

@@ -130,6 +130,7 @@ export default function SuppliersList() {
         name: form.name.trim(),
         phone: form.phone.trim() || null,
         address: form.address.trim() || null,
+        active: true,
         notes: form.notes.trim() || null,
       })
       if (error) throw new Error(error.message)

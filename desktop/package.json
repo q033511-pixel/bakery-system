@@ -48,5 +48,8 @@
   },
   "dependencies": {
     "png2icons": "^2.0.1"
+  },
+  "allowScripts": {
+    "electron@31.7.7": true
   }
 }

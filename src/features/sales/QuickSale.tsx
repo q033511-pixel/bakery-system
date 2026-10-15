@@ -137,7 +137,7 @@ export default function QuickSale() {
     setLines((prev) => prev.filter((_, i) => i !== idx))
   }
 
-  async function save() {
+  async function save(forceOverCredit = false) {
     if (lines.length === 0) { toast.error('أضف صنفاً واحداً على الأقل.'); return }
     const wh = warehouseId ?? defaultWarehouse?.id ?? null
     if (!wh) { toast.error('لا يوجد مستودع — أضف مستودعاً من الإعدادات.'); return }
@@ -155,7 +155,8 @@ export default function QuickSale() {
         payment_type: paymentType,
         payment_method: paymentType === 'CASH' ? 'CASH' : null,
         notes: null,
-        allow_over_credit: overCreditConfirm,
+        // forceOverCredit يمرر مباشرة لتجنب stale closure — overCreditConfirm وحده كان يرسل false دائماً
+        allow_over_credit: forceOverCredit || overCreditConfirm,
       } as Parameters<typeof salesService.create>[0])
       if (res.offline) {
         toast.offline('تم حفظ البيع محلياً وسيتم مزامنته عند عودة الإنترنت.')
@@ -171,7 +172,7 @@ export default function QuickSale() {
       setOverCreditMsg(null)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'حدث خطأ أثناء حفظ البيع.'
-      if (msg.includes('تجاوز حد الائتمان') && !overCreditConfirm) {
+      if (msg.includes('تجاوز حد الائتمان') && !(forceOverCredit || overCreditConfirm)) {
         setOverCreditMsg(msg)
       } else {
         toast.error(msg)
@@ -226,21 +227,10 @@ export default function QuickSale() {
           <div className="rounded-lg bg-danger-50 px-3 py-2.5">
             <p className="text-2xs font-extrabold text-danger-700">{overCreditMsg}</p>
             <div className="mt-2 flex gap-2">
-              <Button size="sm" onClick={() => { setOverCreditConfirm(true); setOverCreditMsg(null); void save() }}>
+              <Button size="sm" variant="danger" onClick={() => { setOverCreditConfirm(true); setOverCreditMsg(null); void save(true) }}>
                 تجاوز الحفظ مع تسجيل التجاوز في التدقيق
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => setOverCreditMsg(null)}>إلغاء</Button>
-            </div>
-          </div>
-        )}
-        {overCreditMsg && (
-          <div className="rounded-lg bg-danger-50 px-3 py-2.5">
-            <p className="text-2xs font-extrabold text-danger-700">{overCreditMsg}</p>
-            <div className="mt-2 flex gap-2">
-              <Button size="sm" variant="danger" onClick={() => { setOverCreditConfirm(true); setOverCreditMsg(null); void save() }}>
-                تجاوز الحفظ مع تسجيل التجاوز في التدقيق
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => setOverCreditMsg(null)}>إلغاء</Button>
+              <Button size="sm" variant="ghost" onClick={() => { setOverCreditMsg(null); setOverCreditConfirm(false) }}>إلغاء</Button>
             </div>
           </div>
         )}

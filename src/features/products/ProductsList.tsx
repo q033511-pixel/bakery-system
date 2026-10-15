@@ -193,10 +193,12 @@ export function QuickAddModal({ open, onClose, onSaved }: {
         name: name.trim(),
         item_type: itemType,
         base_unit_id: baseUnit,
+        sales_unit_id: baseUnit,
         sale_price: salePrice ?? 0,
         default_cost: defaultCost ?? 0,
         avg_cost: defaultCost ?? 0,
         min_stock: minStock ?? 0,
+        active: true,
         notes: notes.trim() || null,
       })
       if (error) throw new Error(error.message.includes('duplicate') ? 'كود الصنف مستخدم مسبقاً.' : 'تعذر حفظ الصنف.')
