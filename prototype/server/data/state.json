@@ -1,0 +1,162 @@
+{
+ "products": [
+  {
+   "id": "p-khobz",
+   "name": "خبز صمون",
+   "price": 4,
+   "stock": 35
+  },
+  {
+   "id": "p-kaak",
+   "name": "كعك سمسم",
+   "price": 3,
+   "stock": 13
+  }
+ ],
+ "customers": [
+  {
+   "id": "c-qusai",
+   "name": "قصي",
+   "balance": 82,
+   "credit_limit": 1000
+  },
+  {
+   "id": "c-saher",
+   "name": "ساهر",
+   "balance": 660,
+   "credit_limit": 500
+  }
+ ],
+ "price_rules": [
+  {
+   "customer_id": "c-qusai",
+   "product_id": "p-khobz",
+   "price": 4
+  },
+  {
+   "customer_id": "c-qusai",
+   "product_id": "p-kaak",
+   "price": 3.5
+  }
+ ],
+ "invoices": [
+  {
+   "id": "e32a116d-01bc-4b8c-9ad5-58a77aae6bf8",
+   "operation_id": "e32a116d-01bc-4b8c-9ad5-58a77aae6bf8",
+   "doc_number": "SAL-000001",
+   "customer_id": "c-qusai",
+   "product_id": "p-khobz",
+   "qty": 10,
+   "unit_price": 4,
+   "price_source": "special",
+   "total": 40,
+   "sale_date": "2026-10-15",
+   "allow_over_credit": false
+  },
+  {
+   "id": "18fb68ba-e22e-4ff3-b3bb-3817d2e39127",
+   "operation_id": "18fb68ba-e22e-4ff3-b3bb-3817d2e39127",
+   "doc_number": "SAL-000002",
+   "customer_id": "c-saher",
+   "product_id": "p-kaak",
+   "qty": 20,
+   "unit_price": 3,
+   "price_source": "default",
+   "total": 60,
+   "sale_date": "2026-10-15",
+   "allow_over_credit": false
+  },
+  {
+   "id": "4ec31c1f-c351-4475-aa5e-d83b320cacb9",
+   "operation_id": "4ec31c1f-c351-4475-aa5e-d83b320cacb9",
+   "doc_number": "SAL-000003",
+   "customer_id": "c-qusai",
+   "product_id": "p-kaak",
+   "qty": 5,
+   "unit_price": 3,
+   "price_source": "default",
+   "total": 15,
+   "sale_date": "2026-10-15",
+   "allow_over_credit": false
+  },
+  {
+   "id": "987d34f9-d381-4acb-99e9-6382e9366fa2",
+   "operation_id": "987d34f9-d381-4acb-99e9-6382e9366fa2",
+   "doc_number": "SAL-000004",
+   "customer_id": "c-qusai",
+   "product_id": "p-khobz",
+   "qty": 1,
+   "unit_price": 4,
+   "price_source": "special",
+   "total": 4,
+   "sale_date": "2026-10-15",
+   "allow_over_credit": false
+  },
+  {
+   "id": "50691ca6-4779-41f5-93c2-4f806f88aa78",
+   "operation_id": "50691ca6-4779-41f5-93c2-4f806f88aa78",
+   "doc_number": "SAL-000005",
+   "customer_id": null,
+   "product_id": "p-kaak",
+   "qty": 60,
+   "unit_price": 3,
+   "price_source": "default",
+   "total": 180,
+   "sale_date": "2026-10-15",
+   "allow_over_credit": false
+  },
+  {
+   "id": "a75640ca-5440-41c5-9264-b770da1f4a6a",
+   "operation_id": "a75640ca-5440-41c5-9264-b770da1f4a6a",
+   "doc_number": "SAL-000006",
+   "customer_id": "c-saher",
+   "product_id": "p-khobz",
+   "qty": 150,
+   "unit_price": 4,
+   "price_source": "default",
+   "total": 600,
+   "sale_date": "2026-10-15",
+   "allow_over_credit": true
+  },
+  {
+   "id": "2e18b503-03cd-4ff7-b241-e371a84c43c7",
+   "operation_id": "2e18b503-03cd-4ff7-b241-e371a84c43c7",
+   "doc_number": "SAL-000007",
+   "customer_id": "c-qusai",
+   "product_id": "p-kaak",
+   "qty": 2,
+   "unit_price": 3.5,
+   "price_source": "special",
+   "total": 7,
+   "sale_date": "2026-10-15",
+   "allow_over_credit": false
+  },
+  {
+   "id": "3770e814-5f60-4986-88c6-7428d7314d54",
+   "operation_id": "3770e814-5f60-4986-88c6-7428d7314d54",
+   "doc_number": "SAL-000008",
+   "customer_id": "c-qusai",
+   "product_id": "p-khobz",
+   "qty": 1,
+   "unit_price": 4,
+   "price_source": "special",
+   "total": 4,
+   "sale_date": "2026-10-15",
+   "allow_over_credit": false
+  },
+  {
+   "id": "2d79ce2a-7c65-4f02-a849-e73bac871b88",
+   "operation_id": "2d79ce2a-7c65-4f02-a849-e73bac871b88",
+   "doc_number": "SAL-000009",
+   "customer_id": "c-qusai",
+   "product_id": "p-khobz",
+   "qty": 3,
+   "unit_price": 4,
+   "price_source": "special",
+   "total": 12,
+   "sale_date": "2026-10-15",
+   "allow_over_credit": false
+  }
+ ],
+ "payments": []
+}
