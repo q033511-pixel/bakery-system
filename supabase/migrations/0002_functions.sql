@@ -323,7 +323,7 @@ declare
   r record; v_dup_id uuid; v_dup_doc text; v_cash_acc uuid;
 begin
   v_bid := assert_business();
-  assert_perm('sales.manage');
+  perform assert_perm('sales.manage');
 
   v_op := (p_payload->>'operation_id')::uuid;
   if not register_op(v_op, 'SALE') then
@@ -411,7 +411,7 @@ language plpgsql security definer set search_path = public as $$
 declare v_bid uuid; v_sale sales%rowtype; r record; v_base_qty numeric; v_avg numeric; v_cash_acc uuid;
 begin
   v_bid := assert_business();
-  assert_perm('sales.void');
+  perform assert_perm('sales.void');
   if p_reason is null or length(trim(p_reason)) < 3 then raise exception 'اكتب سبب الإلغاء.'; end if;
   select * into v_sale from sales where id = p_sale_id and business_id = v_bid for update;
   if not found then raise exception 'الفاتورة غير موجودة.'; end if;
@@ -465,7 +465,7 @@ declare
   r record; v_dup_id uuid; v_dup_doc text; v_cash_acc uuid;
 begin
   v_bid := assert_business();
-  assert_perm('purchases.manage');
+  perform assert_perm('purchases.manage');
 
   v_op := (p_payload->>'operation_id')::uuid;
   if not register_op(v_op, 'PURCHASE') then
@@ -567,7 +567,7 @@ language plpgsql security definer set search_path = public as $$
 declare v_bid uuid; v_pur purchases%rowtype; r record; v_base_qty numeric; v_cost numeric; v_cash_acc uuid;
 begin
   v_bid := assert_business();
-  assert_perm('purchases.void');
+  perform assert_perm('purchases.void');
   if p_reason is null or length(trim(p_reason)) < 3 then raise exception 'اكتب سبب الإلغاء.'; end if;
   select * into v_pur from purchases where id = p_purchase_id and business_id = v_bid for update;
   if not found then raise exception 'فاتورة الشراء غير موجودة.'; end if;
@@ -611,7 +611,7 @@ language plpgsql security definer set search_path = public as $$
 declare v_bid uuid; v_op uuid; v_doc text; v_id uuid; v_customer uuid; v_amount numeric; v_cash_acc uuid; v_dup uuid; v_dup_doc text;
 begin
   v_bid := assert_business();
-  assert_perm('payments.manage');
+  perform assert_perm('payments.manage');
   v_op := (p_payload->>'operation_id')::uuid;
   if not register_op(v_op, 'CUSTOMER_PAYMENT') then
     select id, doc_number into v_dup, v_dup_doc from customer_payments where operation_id = v_op;
@@ -650,7 +650,7 @@ language plpgsql security definer set search_path = public as $$
 declare v_bid uuid; v_op uuid; v_doc text; v_id uuid; v_supplier uuid; v_amount numeric; v_cash_acc uuid; v_dup uuid; v_dup_doc text;
 begin
   v_bid := assert_business();
-  assert_perm('payments.manage');
+  perform assert_perm('payments.manage');
   v_op := (p_payload->>'operation_id')::uuid;
   if not register_op(v_op, 'SUPPLIER_PAYMENT') then
     select id, doc_number into v_dup, v_dup_doc from supplier_payments where operation_id = v_op;
@@ -698,7 +698,7 @@ declare
   r record; v_dup uuid; v_dup_doc text;
 begin
   v_bid := assert_business();
-  assert_perm('production.manage');
+  perform assert_perm('production.manage');
   v_op := (p_payload->>'operation_id')::uuid;
   if not register_op(v_op, 'PRODUCTION') then
     select id, doc_number into v_dup, v_dup_doc from production_batches where operation_id = v_op;
@@ -784,7 +784,7 @@ language plpgsql security definer set search_path = public as $$
 declare v_bid uuid; v_op uuid; v_doc text; v_id uuid; v_amount numeric; v_cash_acc uuid; v_dup uuid; v_dup_doc text;
 begin
   v_bid := assert_business();
-  assert_perm('expenses.manage');
+  perform assert_perm('expenses.manage');
   v_op := (p_payload->>'operation_id')::uuid;
   if not register_op(v_op, 'EXPENSE') then
     select id, doc_number into v_dup, v_dup_doc from expenses where operation_id = v_op;
@@ -827,7 +827,7 @@ declare v_bid uuid; v_op uuid; v_doc text; v_id uuid; v_qty numeric; v_base nume
   v_avg numeric; v_dup uuid; v_dup_doc text;
 begin
   v_bid := assert_business();
-  assert_perm('inventory.adjust');
+  perform assert_perm('inventory.adjust');
   v_op := (p_payload->>'operation_id')::uuid;
   if not register_op(v_op, 'ADJUSTMENT') then
     select id, doc_number into v_dup, v_dup_doc from inventory_adjustments where operation_id = v_op;
@@ -869,7 +869,7 @@ language plpgsql security definer set search_path = public as $$
 declare v_bid uuid; v_op uuid; v_doc text; v_id uuid; v_qty numeric; v_base numeric; v_avg numeric; v_dup uuid; v_dup_doc text;
 begin
   v_bid := assert_business();
-  assert_perm('inventory.waste');
+  perform assert_perm('inventory.waste');
   v_op := (p_payload->>'operation_id')::uuid;
   if not register_op(v_op, 'WASTE') then
     select id, doc_number into v_dup, v_dup_doc from waste_records where operation_id = v_op;
@@ -912,7 +912,7 @@ declare v_bid uuid; v_op uuid; v_doc text; v_id uuid; v_base numeric; v_avg nume
   v_from uuid; v_to uuid; v_dup uuid; v_dup_doc text; r record;
 begin
   v_bid := assert_business();
-  assert_perm('inventory.transfer');
+  perform assert_perm('inventory.transfer');
   v_op := (p_payload->>'operation_id')::uuid;
   if not register_op(v_op, 'TRANSFER') then
     select id, doc_number into v_dup, v_dup_doc from transfers where operation_id = v_op;
@@ -971,7 +971,7 @@ declare v_bid uuid; v_op uuid; v_doc text; v_id uuid; v_base numeric;
   v_warehouse uuid; v_dup uuid; v_dup_doc text; r record;
 begin
   v_bid := assert_business();
-  assert_perm('distribution.manage');
+  perform assert_perm('distribution.manage');
   v_op := (p_payload->>'operation_id')::uuid;
   if not register_op(v_op, 'DISTRIBUTION_LOAD') then
     select id, doc_number into v_dup, v_dup_doc from distribution_loads where operation_id = v_op;
@@ -1031,7 +1031,7 @@ declare
   v_date date; v_del_id uuid; r record;
 begin
   v_bid := assert_business();
-  assert_perm('distribution.manage');
+  perform assert_perm('distribution.manage');
   v_op := (p_payload->>'operation_id')::uuid;
   if not register_op(v_op, 'DISTRIBUTION_DELIVERY') then
     select id into v_del_id from distribution_deliveries where operation_id = v_op;
@@ -1104,7 +1104,7 @@ declare v_bid uuid; v_op uuid; v_load uuid; v_product uuid; v_qty numeric; v_uni
   v_base numeric; v_loaded numeric; v_out numeric; v_id uuid; v_warehouse uuid; r record;
 begin
   v_bid := assert_business();
-  assert_perm('distribution.manage');
+  perform assert_perm('distribution.manage');
   v_op := (p_payload->>'operation_id')::uuid;
   if not register_op(v_op, 'DISTRIBUTION_RETURN') then
     select id into v_id from distribution_returns where operation_id = v_op;
@@ -1170,7 +1170,7 @@ declare v_bid uuid; v_op uuid; v_doc text; v_id uuid; v_load distribution_loads%
   v_breakdown jsonb := '[]'::jsonb; v_cash_acc uuid; v_prod record; r record;
 begin
   v_bid := assert_business();
-  assert_perm('distribution.settle');
+  perform assert_perm('distribution.settle');
   select * into v_load from distribution_loads where id = p_load_id and business_id = v_bid for update;
   if not found then raise exception 'الحمولة غير موجودة.'; end if;
   if v_load.status = 'SETTLED' then raise exception 'الحمولة مُسوّاة مسبقاً.'; end if;

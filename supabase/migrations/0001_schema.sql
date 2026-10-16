@@ -468,7 +468,8 @@ create table if not exists cash_accounts (
   name text not null,
   kind text not null default 'CASH', -- CASH | BANK | OTHER
   is_default boolean not null default false,
-  active boolean not null default true
+  active boolean not null default true,
+  created_at timestamptz not null default now()
 );
 create index if not exists idx_cash_accounts_business on cash_accounts(business_id);
 

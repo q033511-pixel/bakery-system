@@ -46,13 +46,25 @@ language sql stable as $$
       and (cp.start_date is null or cp.start_date <= p_date)
       and (cp.end_date is null or cp.end_date >= p_date)
       and (cp.unit_id is null or cp.unit_id = p_unit)
+  ),
+  rule_hit as (
+    select c.price,
+           case c.specificity when 2 then 'CUSTOMER_UNIT_RULE' when 1 then 'CUSTOMER_PRODUCT_RULE' end as source,
+           c.id
+    from candidates c
+    where c.specificity > 0
+    order by c.specificity desc, c.start_date desc nulls last, c.updated_at desc
+    limit 1
+  ),
+  general as (
+    -- بلا عميل أو بلا قاعدة مطابقة → السعر العام للصنف (مطابق لسلوك الواجهة المحلية)
+    select p.sale_price::numeric(14,4) as price, 'GENERAL' as source, null::uuid as id
+    from products p
+    where p.id = p_product
   )
-  select c.price,
-         case c.specificity when 2 then 'CUSTOMER_UNIT_RULE' when 1 then 'CUSTOMER_PRODUCT_RULE' end as source,
-         c.id
-  from candidates c
-  where c.specificity > 0
-  order by c.specificity desc, c.start_date desc nulls last, c.updated_at desc
+  select * from rule_hit
+  union all
+  select * from general where not exists (select 1 from rule_hit)
   limit 1
 $$;
 
@@ -90,7 +102,7 @@ left join (
 ) pay on pay.customer_id = c.id;
 
 -- كشف حساب العميل: صف الافتتاحي أولاً ثم الحركات مع رصيد تراكمي
-create or replace function get_customer_statement(p_customer uuid, p_from date, p_to date)
+create or replace function get_customer_statement(p_customer uuid, p_from date default null, p_to date default null)
 returns table (date timestamptz, type text, reference text, debit numeric, credit numeric, balance numeric, notes text)
 language plpgsql stable as $$
 declare
