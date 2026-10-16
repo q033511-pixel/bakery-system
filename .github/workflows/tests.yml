@@ -54,6 +54,8 @@ jobs:
           --health-retries 10
     env:
       TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/bakery_test
+      POSTGREST_URL: http://127.0.0.1:5434/rest/v1
+      TEST_JWT_SECRET: ci-local-only-jwt-secret-8d3f2a91c7b4e6d5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -63,5 +65,23 @@ jobs:
       - run: npm ci
       - name: تطبيق الحاضنة المحلية + جميع الـmigrations على قاعدة نظيفة
         run: APPLY_SHIM=1 node scripts/apply-migrations.js
-      - name: اختبارات الخادم الحقيقية (SQL + RLS + أجهزة + مزامنة + 10 سيناريوهات)
+      - name: تنزيل PostgREST 12 (نفس محرك الـAPI الذي يشغله Supabase)
+        run: |
+          curl -sfL -m 300 "https://github.com/PostgREST/postgrest/releases/download/v12.2.12/postgrest-v12.2.12-linux-static-x86-64.tar.xz" -o /tmp/pgr.tar.xz
+          tar -xf /tmp/pgr.tar.xz -C /tmp
+          cat > /tmp/pgr.conf <<'EOF'
+          db-uri = "postgres://postgres:postgres@localhost:5432/bakery_test"
+          db-schemas = "public"
+          db-anon-role = "anon"
+          db-authenticated-role = "authenticated"
+          jwt-secret = "ci-local-only-jwt-secret-8d3f2a91c7b4e6d5"
+          server-host = "127.0.0.1"
+          server-port = 5437
+          EOF
+          sed -i 's/^          //' /tmp/pgr.conf
+          /tmp/postgrest /tmp/pgr.conf > /tmp/pgr.log 2>&1 &
+          node scripts/dev-gateway.js 5434 5437 &
+          for i in $(seq 1 40); do curl -sf -o /dev/null http://127.0.0.1:5434/rest/v1/ && break; sleep 1; done
+          curl -sf -o /dev/null http://127.0.0.1:5434/rest/v1/ || { echo "PostgREST gateway not healthy"; tail -20 /tmp/pgr.log; exit 1; }
+      - name: اختبارات الخادم الحقيقية (SQL + RLS + أجهزة + مزامنة + طبقة نقل HTTP + 10 سيناريوهات)
         run: npx vitest run

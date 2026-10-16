@@ -38,7 +38,7 @@
 - **النقل بين الأجهزة:** ناقل بيانات JSON يدوي (تصدير/استيراد) — **لا مزامنة سحابية في هذه النسخة** (القرار المعماري معلق على اعتماد الزبون: `SYNC_ARCHITECTURE_DECISION.md`)
 - **PWA:** vite-plugin-pwa (Workbox precache)
 - **النشر:** GitHub Pages + GitHub Actions
-- **الاختبارات:** Vitest — 137 اختباراً (86 وحدة + 10 محرك مزامنة + 41 خادم على PostgreSQL حقيقي في CI)
+- **الاختبارات:** Vitest — 147 اختباراً (86 وحدة + 10 محرك مزامنة + 41 خادم + 10 طبقة نقل على PostgREST 12 حقيقي في CI)
 
 ## 🔄 المزامنة — الواقع الحالي (v8.2.0)
 
@@ -64,7 +64,7 @@ bakery-system/
 ├── supabase/
 │   ├── migrations/     # 0001-0006: schema، RPCs، RLS، views، seed، تسعير العملاء والذمم
 │   └── tests/          # اختبارات SQL لسيناريوهات المواصفة
-├── tests/              # اختبارات Vitest (96 محلية + 41 اختبار خادم في tests/server)
+├── tests/              # اختبارات Vitest (96 محلية + 51 اختبار خادم/نقل في tests/server)
 └── .github/workflows/  # ci.yml + tests.yml (typecheck+lint+tests على كل PR + postgres:17 للخادم) + deploy.yml → GitHub Pages
 ```
 
@@ -110,7 +110,7 @@ npm run dev               # http://localhost:5173
 
 ## 🧪 الاختبارات
 
-- **137 اختباراً ناجحاً** في 11 ملف: وحدات محلية (86) + محرك المزامنة (10) + **خادم PostgreSQL حقيقي (41)**: RLS فعلي، هوية أجهزة (إبطال/تدوير)، بروتوكول مزامنة (اعتماد/رفض مسبب/منع تكرار)، **السيناريوهات العشرة بجهازين**، تجربة ترحيل بمطابقة صفرية.
+- **147 اختباراً ناجحاً** في 12 ملف: وحدات محلية (86) + محرك المزامنة (10) + **خادم PostgreSQL حقيقي (41)** + **طبقة نقل PostgREST 12 حقيقي (10)**: RLS فعلي، هوية أجهزة (إبطال/تدوير)، بروتوكول مزامنة (اعتماد/رفض مسبب/منع تكرار)، **السيناريوهات العشرة بجهازين**، تجربة ترحيل بمطابقة صفرية، وتحقق HTTP كامل لترويسات JWT والأجهزة.
 - **CI** (`.github/workflows/tests.yml`): typecheck + lint + كل الاختبارات على كل PR، واختبارات الخادم مقابل خدمة postgres:17.
 - التفاصيل: [TESTING.md](./docs/TESTING.md) — النتائج: [TEST_RESULTS_SYNC_EXPERIMENT.md](./TEST_RESULTS_SYNC_EXPERIMENT.md).
 

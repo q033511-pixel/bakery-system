@@ -239,5 +239,13 @@ grant execute on function sync_status_summary() to authenticated;
 grant execute on function apply_customer_upsert(jsonb), apply_supplier_upsert(jsonb),
   apply_product_upsert(jsonb), apply_customer_price_upsert(jsonb) to authenticated;
 
+-- أصغر صلاحية: الزائر المجهول لا ينفّذ أي وظيفة مزامنة
+-- (افتراضي PostgreSQL يمنح EXECUTE لـ public — يُسحب صراحةً هنا)
+revoke execute on function submit_sync_operation(uuid,text,jsonb,timestamptz) from anon, public;
+revoke execute on function pull_changes(bigint,integer) from anon, public;
+revoke execute on function sync_status_summary() from anon, public;
+revoke execute on function apply_customer_upsert(jsonb), apply_supplier_upsert(jsonb),
+  apply_product_upsert(jsonb), apply_customer_price_upsert(jsonb) from anon, public;
+
 revoke insert, update, delete, truncate on sync_queue from authenticated;
 revoke all on sync_queue from anon;
