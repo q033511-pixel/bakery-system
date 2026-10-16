@@ -2,8 +2,9 @@
 /* بوابة اختبار تحاكي ما تفعله بوابة Supabase: تحويل /rest/v1/* إلى /* أمام
  * PostgREST الخام — كي يتحدث ناقل التطبيق (supabaseTransport.ts) بنفس شكل
  * روابط Supabase الحقيقي. للاختبار المحلي وCI فقط — ليست جزءاً من التطبيق.
- * الاستخدام: node scripts/dev-gateway.js [منفذ_البوابة] [منفذ_postgrest] */
-const http = require('http')
+ * الاستخدام: node scripts/dev-gateway.js [منفذ_البوابة] [منفذ_postgrest]
+ * (ESM — الحزمة "type": "module") */
+import http from 'node:http'
 
 const GATEWAY_PORT = Number(process.argv[2] || 5434)
 const UPSTREAM_PORT = Number(process.argv[3] || 5437)
