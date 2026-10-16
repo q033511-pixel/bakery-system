@@ -5,10 +5,15 @@
  *   3) مشروع Supabase تجريبي سحابي (بعد توفير المفاتيح من المالك)
  * البيئة: TEST_DATABASE_URL إلزامية. APPLY_SHIM=1 يضيف حاضنة المحاكاة المحلية
  * (supabase/dev/local_shim.sql) — تُستخدم فقط على PostgreSQL خام، ولا تُطبَّق
- * أبداً على مشروع Supabase سحابي (كل ما فيها موجود أصلاً). */
-const fs = require('fs');
-const path = require('path');
-const { Client } = require('pg');
+ * أبداً على مشروع Supabase سحابي (كل ما فيها موجود أصلاً).
+ * ملاحظة: ESM — الحزمة "type": "module" (إصلاح عطل CI: require ليس معرفاً في ESM). */
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import pg from 'pg';
+
+const { Client } = pg;
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const URL_ = process.env.TEST_DATABASE_URL;
 if (!URL_) { console.error('TEST_DATABASE_URL is required'); process.exit(1); }
