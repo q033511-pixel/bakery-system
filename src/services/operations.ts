@@ -4,6 +4,7 @@
  */
 import { newOperationId } from '@/lib/operation'
 import { executeOperation, registerOpType } from '@/services/sync/syncEngine'
+import { enqueueVoidAfterLocalOp } from '@/services/sync/central'
 import { rpc } from '@/services/rpc'
 import type {
   CreateExpenseInput, CreateLoadInput, CreatePaymentInput, CreateProductionInput,
@@ -57,6 +58,8 @@ export const salesService = {
   },
   async void(saleId: string, reason: string): Promise<void> {
     await rpc('void_sale', { p_sale_id: saleId, p_reason: reason })
+    // مزامنة الإبطال (تجربة الخطة B): يُدرج بعد نجاحه محلياً — معطّلة افتراضياً
+    try { await enqueueVoidAfterLocalOp('SALE_VOID', saleId, reason) } catch { /* لا يعطل المحلي */ }
   },
 }
 
@@ -66,6 +69,7 @@ export const purchasesService = {
   },
   async void(purchaseId: string, reason: string): Promise<void> {
     await rpc('void_purchase', { p_purchase_id: purchaseId, p_reason: reason })
+    try { await enqueueVoidAfterLocalOp('PURCHASE_VOID', purchaseId, reason) } catch { /* لا يعطل المحلي */ }
   },
 }
 

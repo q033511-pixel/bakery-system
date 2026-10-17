@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
+import { enqueueUpsertAfterLocalSave } from '@/services/sync/central'
 import { supabase } from '@/lib/supabase'
 import { db } from '@/db/db'
 import { lookups } from '@/services/lookups'
@@ -86,9 +87,26 @@ export default function ProductForm() {
         }).eq('id', id)
         if (error) throw new Error('تعذر حفظ التعديلات.')
         toast.success('تم حفظ التعديلات.')
+        // مزامنة التعديل (تجربة الخطة B): الصف المدموج يُرفع كـupsert — معطّلة افتراضياً
+        if (product) {
+          try {
+            await enqueueUpsertAfterLocalSave('PRODUCT_UPSERT', {
+              ...product,
+              name: name.trim(),
+              item_type: itemType,
+              base_unit_id: baseUnit,
+              sale_price: salePrice ?? 0,
+              min_stock: minStock ?? 0,
+              active,
+              notes: notes.trim() || null,
+            })
+          } catch { /* لا يعطل المحلي */ }
+        }
       } else {
         const code = await nextProductCode()
-        const { error } = await supabase.from('products').insert({
+        // معرف مُولّد مسبقاً — للإدراج ولطابور المزامنة معاً (تجربة الخطة B)
+        const row = {
+          id: crypto.randomUUID(),
           business_id: businessId,
           code,
           name: name.trim(),
@@ -101,8 +119,10 @@ export default function ProductForm() {
           notes: notes.trim() || null,
           avg_cost: 0,
           last_purchase_cost: 0,
-        })
+        }
+        const { error } = await supabase.from('products').insert(row)
         if (error) throw new Error('تعذر إضافة الصنف.')
+        try { await enqueueUpsertAfterLocalSave('PRODUCT_UPSERT', row) } catch { /* لا يعطل المحلي */ }
         toast.success(`تمت إضافة الصنف — الكود ${code}`)
       }
       const { refreshLookups } = await import('@/services/lookups')

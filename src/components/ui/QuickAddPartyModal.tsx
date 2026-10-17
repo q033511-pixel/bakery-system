@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase'
 import { refreshLookups } from '@/services/lookups'
 import { useAuthStore } from '@/app/authStore'
 import { useToast } from '@/lib/toast'
+import { enqueueUpsertAfterLocalSave } from '@/services/sync/central'
 import { Button, Field, Input } from '@/components/ui/primitives'
 import { Modal } from '@/components/ui/overlays'
 
@@ -37,17 +38,24 @@ export function QuickAddPartyModal({ kind, open, onClose, onCreated }: {
       const businessId = useAuthStore.getState().profile?.business_id
       if (!businessId) throw new Error('لا يوجد نشاط مسجل — أعد فتح النظام.')
       const code = (kind === 'supplier' ? 'SU-' : 'CU-') + Date.now().toString(36).toUpperCase()
-      const row = kind === 'supplier'
-        ? { business_id: businessId, code, name: name.trim(), phone: phone.trim() || null }
-        : { business_id: businessId, code, name: name.trim(), phone: phone.trim() || null }
-      const { data, error } = await supabase
+      // معرف مُولّد مسبقاً — للإدراج ولطابور المزامنة معاً (تجربة الخطة B)
+      const row = {
+        id: crypto.randomUUID(),
+        business_id: businessId,
+        code,
+        name: name.trim(),
+        phone: phone.trim() || null,
+      }
+      const { error } = await supabase
         .from(kind === 'supplier' ? 'suppliers' : 'customers')
         .insert(row)
         .select('id')
         .single()
       if (error) throw new Error(error.message)
-      const newId = (data as { id: string } | null)?.id
-      if (!newId) throw new Error('تعذر تأكيد إنشاء السجل.')
+      const newId = (row.id as string) ?? crypto.randomUUID()
+      try {
+        await enqueueUpsertAfterLocalSave(kind === 'supplier' ? 'SUPPLIER_UPSERT' : 'CUSTOMER_UPSERT', row)
+      } catch { /* لا يعطل المحلي */ }
       await refreshLookups()
       toast.success(`تمت إضافة ${label} — ${name.trim()}`)
       reset()

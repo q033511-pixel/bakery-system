@@ -17,6 +17,7 @@ import { Card, StatCard, Field, Input, Select, Textarea, Button } from '@/compon
 import { Modal } from '@/components/ui/overlays'
 import { DataTable } from '@/components/ui/DataTable'
 import { LoadingState, ErrorState } from '@/components/ui/states'
+import { enqueueUpsertAfterLocalSave } from '@/services/sync/central'
 import type { Supplier } from '@/types'
 
 /** صف تقرير الموردين — مطابق لما ترجعه get_suppliers_report() */
@@ -124,7 +125,9 @@ export default function SuppliersList() {
     }
     setSaving(true)
     try {
-      const { error } = await supabase.from('suppliers').insert({
+      // معرف مُولّد مسبقاً — للإدراج ولطابور المزامنة معاً (تجربة الخطة B)
+      const row = {
+        id: crypto.randomUUID(),
         business_id: businessId,
         code: 'SU-' + Date.now().toString(36).toUpperCase(),
         name: form.name.trim(),
@@ -132,8 +135,10 @@ export default function SuppliersList() {
         address: form.address.trim() || null,
         active: true,
         notes: form.notes.trim() || null,
-      })
+      }
+      const { error } = await supabase.from('suppliers').insert(row)
       if (error) throw new Error(error.message)
+      try { await enqueueUpsertAfterLocalSave('SUPPLIER_UPSERT', row) } catch { /* لا يعطل المحلي */ }
       toast.success('تم إضافة المورد')
       setAddOpen(false)
       void qc.invalidateQueries({ queryKey: ['suppliers-report'] })

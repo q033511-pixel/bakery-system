@@ -57,6 +57,7 @@ const ReportView = lazy(() => import('@/features/reports/ReportView'))
 const AuditLogPage = lazy(() => import('@/features/audit/AuditLogPage'))
 const SettingsPage = lazy(() => import('@/features/settings/SettingsPage'))
 const BackupCenter = lazy(() => import('@/features/settings/BackupCenter'))
+const SyncCenter = lazy(() => import('@/features/settings/SyncCenter'))
 const DataBridgePage = lazy(() => import('@/features/databridge/DataBridgePage'))
 const MorePage = lazy(() => import('@/app/MorePage'))
 
@@ -132,6 +133,7 @@ export default function App() {
 
             <Route path="settings" element={<SettingsPage />} />
             <Route path="settings/backup" element={<BackupCenter />} />
+            <Route path="settings/sync" element={<SyncCenter />} />
             <Route path="databridge" element={<DataBridgePage />} />
             <Route path="more" element={<MorePage />} />
           </Route>

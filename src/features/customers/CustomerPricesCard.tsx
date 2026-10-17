@@ -6,6 +6,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { rpc } from '@/services/rpc'
+import { enqueueUpsertAfterLocalSave } from '@/services/sync/central'
 import { lookups } from '@/services/lookups'
 import { useAuthStore } from '@/app/authStore'
 import { formatMoney } from '@/lib/money'
@@ -61,6 +62,19 @@ export default function CustomerPricesCard({ customerId }: { customerId: string 
     },
     onSuccess: (res) => {
       toast.success(res.updated ? 'تم تحديث السعر الخاص.' : 'تمت إضافة السعر الخاص — سيظهر تلقائياً في فواتير هذا العميل.')
+      // مزامنة قاعدة السعر (تجربة الخطة B): payload مطابق لـapply_customer_price_upsert
+      try {
+        void enqueueUpsertAfterLocalSave('CUSTOMER_PRICE_UPSERT', {
+          id: res.id,
+          customer_id: customerId,
+          product_id: productId,
+          unit_id: unitId || null,
+          price: Number(price),
+          start_date: startDate || null,
+          end_date: endDate || null,
+          active: true,
+        })
+      } catch { /* لا يعطل المحلي */ }
       setModalOpen(false)
       resetForm()
       void qc.invalidateQueries({ queryKey: ['customer-prices', customerId] })

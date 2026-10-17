@@ -6,6 +6,7 @@
  */
 import Dexie, { type Table } from 'dexie'
 import type { PendingOp } from '@/types'
+import type { StoredPendingOp } from '@/services/sync/central'
 
 export interface CacheRow<T = Record<string, unknown>> {
   key: string
@@ -86,6 +87,8 @@ class BakeryDB extends Dexie {
   // v3 — التسعير الخاص بالعميل + الإقفال اليومي للصندوق
   customer_products!: Table<LocalRow, string>
   cash_closings!: Table<LocalRow, string>
+  // v4 — طابور المزامنة المركزية (تجربة الخطة B)
+  sync_ops!: Table<StoredPendingOp, string>
 
   constructor() {
     super('bakery_system')
@@ -156,6 +159,10 @@ class BakeryDB extends Dexie {
     this.version(3).stores({
       customer_products: 'id, business_id, customer_id, product_id, [customer_id+product_id]',
       cash_closings: 'id, business_id, &operation_id, cash_account_id, closing_date',
+    })
+    // v4 — طابور المزامنة المركزية (تجربة الخطة B): إضافة بحتة لا تمس أي جدول قائم
+    this.version(4).stores({
+      sync_ops: 'operation_id, state, op_type, created_at, [state+created_at]',
     })
   }
 }

@@ -18,6 +18,7 @@ import { MoneyInput } from '@/components/ui/inputs'
 import { Modal } from '@/components/ui/overlays'
 import { DataTable } from '@/components/ui/DataTable'
 import { LoadingState, ErrorState } from '@/components/ui/states'
+import { enqueueUpsertAfterLocalSave } from '@/services/sync/central'
 import type { Customer } from '@/types'
 
 /** صف تقرير العملاء — مطابق لما ترجعه get_customers_report() */
@@ -133,7 +134,10 @@ export default function CustomersList() {
     }
     setSaving(true)
     try {
-      const { error } = await supabase.from('customers').insert({
+      // معرف مُولّد مسبقاً — يُستخدم للإدراج ولطابور المزامنة معاً (تجربة الخطة B)
+      const rowId = crypto.randomUUID()
+      const row = {
+        id: rowId,
         business_id: businessId,
         code: 'CU-' + Date.now().toString(36).toUpperCase(),
         name: form.name.trim(),
@@ -144,8 +148,10 @@ export default function CustomersList() {
         payment_terms_days: form.payment_terms_days ?? 0,
         active: true,
         notes: form.notes.trim() || null,
-      })
+      }
+      const { error } = await supabase.from('customers').insert(row)
       if (error) throw new Error(error.message)
+      try { await enqueueUpsertAfterLocalSave('CUSTOMER_UPSERT', row) } catch { /* لا يعطل المحلي */ }
       toast.success('تم إضافة العميل')
       setAddOpen(false)
       void qc.invalidateQueries({ queryKey: ['customers-report'] })

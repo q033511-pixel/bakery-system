@@ -7,6 +7,7 @@
  */
 import { db } from '@/db/db'
 import { create } from 'zustand'
+import { enqueueAfterLocalOp } from '@/services/sync/central'
 
 type OpFn = (payload: Record<string, unknown>) => Promise<unknown>
 
@@ -85,6 +86,12 @@ export async function executeOperation<T = unknown>(
   try {
     const data = (await fn(payload)) as T
     useSyncStore.getState().markSynced()
+    // المزامنة المركزية (تجربة الخطة B): إدراج الطابور بعد نجاح محلي مؤكد.
+    // معطّلة افتراضياً = صفر عمل. لا تفشل العملية المحلية أبداً بسبب خطأ الإدراج.
+    try {
+      const localId = (data as { id?: string | null } | null)?.id ?? null
+      await enqueueAfterLocalOp(type, payload, localId)
+    } catch { /* الإدراج لا يعطل العملية المحلية أبداً */ }
     return { ok: true, offline: false, data }
   } catch (err) {
     // فشل تنفيذ محلي = خطأ بيانات/تحقق يُعرض للمستخدم (لا طابور)
