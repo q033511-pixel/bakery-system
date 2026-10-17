@@ -35,7 +35,7 @@ export default function BackupCenter() {
   const [counts, setCounts] = useState<Record<string, number>>({})
   const [totalRows, setTotalRows] = useState(0)
   const [storage, setStorage] = useState<{ used: string; quota: string } | null>(null)
-  const [lastBackup, setLastBackup] = useState<string | null>(null)
+  const [lastBackup, setLastBackup] = useState<string | null>(() => lastBackupAt())
   const [exporting, setExporting] = useState(false)
   const [importBusy, setImportBusy] = useState(false)
   const [confirmImport, setConfirmImport] = useState<BackupFile | null>(null)
@@ -43,7 +43,6 @@ export default function BackupCenter() {
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    setLastBackup(lastBackupAt())
     void navigator.storage?.estimate?.().then((est) => {
       setStorage({
         used: humanSize(est.usage ?? 0),
@@ -52,7 +51,9 @@ export default function BackupCenter() {
     }).catch(() => setStorage(null))
   }, [])
 
-  const refreshCounts = useCallback(async () => {
+  // جلب أحجام الجداول — تعيد البيانات فقط، وضبط الحالة يحدث في .then
+  // (بدون setState متزامن داخل التأثير — متطلب react-hooks/set-state-in-effect)
+  const fetchCounts = useCallback(async (): Promise<[Record<string, number>, number]> => {
     const names = db.tables.map((t) => t.name)
     const entries: [string, number][] = []
     let total = 0
@@ -61,11 +62,16 @@ export default function BackupCenter() {
       entries.push([n, c])
       total += c
     }
-    setCounts(Object.fromEntries(entries))
-    setTotalRows(total)
+    return [Object.fromEntries(entries), total]
   }, [])
 
-  useEffect(() => { void refreshCounts() }, [refreshCounts])
+  useEffect(() => {
+    let alive = true
+    void fetchCounts().then(([c, t]) => {
+      if (alive) { setCounts(c); setTotalRows(t) }
+    }).catch(() => undefined)
+    return () => { alive = false }
+  }, [fetchCounts])
 
   // ---------- التصدير ----------
   const doExport = async () => {

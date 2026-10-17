@@ -1,5 +1,5 @@
 /** إضافة/تعديل صنف — كامل الحقول (بند 9/10) */
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
@@ -34,30 +34,29 @@ export default function ProductForm() {
   const [active, setActive] = useState(true)
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
-  const [hydrated, setHydrated] = useState(false)
 
-  useEffect(() => {
-    if (product && !hydrated) {
-      setName(product.name)
-      setItemType(product.item_type)
-      setBaseUnit(product.base_unit_id)
-      setSalePrice(product.sale_price)
-      setMinStock(product.min_stock)
-      setActive(product.active)
-      setNotes(product.notes ?? '')
-      setHydrated(true)
-    }
-  }, [product, hydrated])
+  // تهيئة النموذج من المنتج مرة واحدة — ضبط أثناء الرسم بدل تأثير
+  // (نفس دلالات السلوك السابق: مرة واحدة لكل تركيب)
+  const [hydrated, setHydrated] = useState(false)
+  if (product && !hydrated) {
+    setHydrated(true)
+    setName(product.name)
+    setItemType(product.item_type)
+    setBaseUnit(product.base_unit_id)
+    setSalePrice(product.sale_price)
+    setMinStock(product.min_stock)
+    setActive(product.active)
+    setNotes(product.notes ?? '')
+  }
 
   // افتراضي حقيقي للوحدة في وضع الإضافة: القائمة تعرض أول وحدة بصرياً — يجب أن تطابقها الحالة
   // (بدون هذا كان الحفظ يُرفض برسالة «اختر الوحدة» رغم ظهور وحدة مختارة)
-  useEffect(() => {
-    if (!isEdit && baseUnit === '' && units.length > 0) {
-      const kg = units.find((u) => u.symbol === 'كغ' || u.name.includes('كيلو'))
-      const fallback = kg ?? units[0]
-      if (fallback) setBaseUnit(fallback.id)
-    }
-  }, [isEdit, baseUnit, units])
+  // — ضبط أثناء الرسم: بعد الضبط يصبح baseUnit غير فارغ فلا تكرار
+  if (!isEdit && baseUnit === '' && units.length > 0) {
+    const kg = units.find((u) => u.symbol === 'كغ' || u.name.includes('كيلو'))
+    const fallback = kg ?? units[0]
+    if (fallback) setBaseUnit(fallback.id)
+  }
 
   /** كود تلقائي متسلسل P-0001 */
   async function nextProductCode(): Promise<string> {

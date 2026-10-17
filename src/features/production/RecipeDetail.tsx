@@ -2,7 +2,7 @@
  * تفاصيل الوصفة — إنشاء وصفة جديدة أو عرض النسخ وإضافة نسخة جديدة (بند 24/25).
  * كل دفعة إنتاج تحتفظ بنسخة الوصفة التي استخدمها — النسخ الجديدة لا تغيّر القديمة.
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLiveQuery } from 'dexie-react-hooks'
@@ -94,12 +94,16 @@ export default function RecipeDetail() {
     [products],
   )
 
-  // تعيين وحدة المخرجات تلقائياً على الوحدة الأساسية للمنتج
-  useEffect(() => {
-    if (!productId) return
-    const p = finishedProducts.find((x) => x.id === productId)
-    if (p && !outputUnitId) setOutputUnitId(p.base_unit_id)
-  }, [productId, finishedProducts, outputUnitId])
+  // تعيين وحدة المخرجات تلقائياً على الوحدة الأساسية للمنتج — ضبط أثناء الرسم بدل تأثير
+  const autoUnitProduct = productId ? finishedProducts.find((x) => x.id === productId) : undefined
+  const [unitAdjustedKey, setUnitAdjustedKey] = useState<string | null>(null)
+  if (autoUnitProduct && !outputUnitId) {
+    const key = `${productId}:${autoUnitProduct.base_unit_id}`
+    if (key !== unitAdjustedKey) {
+      setUnitAdjustedKey(key)
+      setOutputUnitId(autoUnitProduct.base_unit_id)
+    }
+  }
 
   const versions = useMemo(
     () => (recipe?.recipe_versions ? [...recipe.recipe_versions].sort((a, b) => b.version_no - a.version_no) : []),

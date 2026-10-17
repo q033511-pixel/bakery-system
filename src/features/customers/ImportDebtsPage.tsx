@@ -132,14 +132,16 @@ export default function ImportDebtsPage() {
   const validCreditRows = mapped.filter((r) => r.valid && r.status === 'CREDIT')
   const skippedCashRows = mapped.filter((r) => r.valid && r.status === 'CASH')
   const grandTotal = validCreditRows.reduce((s, r) => s + (r.amount ?? 0), 0)
-  const duplicateGroups = useMemo(() => {
+  // مجموعات التكرار — حساب مباشر بلا useMemo (المدخل validCreditRows مشتق جديد
+  // في كل رسم فلا فائدة من الحفظ، وقاعدة react-hooks تمنع الحفظ غير القابل للضمان)
+  const duplicateGroups = (() => {
     const seen = new Map<string, number[]>()
     validCreditRows.forEach((r) => {
       const k = `${r.customer}|${r.dateISO}|${r.amount}`
       seen.set(k, [...(seen.get(k) ?? []), r.line])
     })
     return [...seen.keys()].map((k) => ({ k, lines: seen.get(k) as number[] })).filter((e) => e.lines.length > 1)
-  }, [validCreditRows])
+  })()
 
   function onFile(file: File) {
     const reader = new FileReader()

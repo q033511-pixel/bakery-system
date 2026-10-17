@@ -2,7 +2,7 @@
  * الإعدادات (بند 68/69): بيانات النشاط (تعديل مباشر بصلاحية)، المستودعات، الوحدات والتحويلات،
  * فئات المنتجات والمصروفات، طرق الدفع (ثابتة)، ورابط إدارة المستخدمين.
  */
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { ChevronLeft, HardDrive, Plus, Settings2, ShieldCheck, KeyRound, Lock, Warehouse as WarehouseIcon } from 'lucide-react'
@@ -76,15 +76,17 @@ export default function SettingsPage() {
   const [allowNegative, setAllowNegative] = useState(false)
   const [savingBusiness, setSavingBusiness] = useState(false)
 
-  useEffect(() => {
-    if (businessQ.data) {
-      setName(businessQ.data.name)
-      setCurrency(businessQ.data.currency)
-      setCurrencySymbol(businessQ.data.currency_symbol)
-      setTimezone(businessQ.data.timezone)
-      setAllowNegative(businessQ.data.allow_negative_stock)
-    }
-  }, [businessQ.data])
+  // تهيئة حقول النموذج من بيانات النشاط — ضبط أثناء الرسم بدل تأثير
+  // (نفس السلوك: كل بيانات جديدة تعيد ضبط الحقول)
+  const [hydratedData, setHydratedData] = useState<typeof businessQ.data>(undefined)
+  if (businessQ.data && businessQ.data !== hydratedData) {
+    setHydratedData(businessQ.data)
+    setName(businessQ.data.name)
+    setCurrency(businessQ.data.currency)
+    setCurrencySymbol(businessQ.data.currency_symbol)
+    setTimezone(businessQ.data.timezone)
+    setAllowNegative(businessQ.data.allow_negative_stock)
+  }
 
   async function saveBusiness() {
     if (!name.trim()) { toast.error('أدخل اسم النشاط.'); return }

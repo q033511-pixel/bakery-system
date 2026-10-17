@@ -1,5 +1,5 @@
 /** دفعة إنتاج جديدة — استهلاك المواد تلقائياً حسب نسخة الوصفة (بند 23/24/25) */
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
@@ -67,10 +67,13 @@ export default function ProductionForm() {
   )
   const selectedRecipe = selectedVersion ? recipeById.get(selectedVersion.recipe_id) : undefined
 
-  // إعادة ضبط النسخة عند تغيير المنتج
-  useEffect(() => {
+  // إعادة ضبط النسخة عند تغيير المنتج — ضبط أثناء الرسم بدل تأثير
+  // (نمط React الرسمي: You Might Not Need an Effect)
+  const [prevProductId, setPrevProductId] = useState(productId)
+  if (productId !== prevProductId) {
+    setPrevProductId(productId)
     setRecipeVersionId(null)
-  }, [productId])
+  }
 
   const outputSymbol = selectedVersion ? unitById.get(selectedVersion.output_unit_id)?.symbol ?? '' : ''
   const factor = selectedVersion && selectedVersion.output_quantity > 0

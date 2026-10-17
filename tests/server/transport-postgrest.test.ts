@@ -45,7 +45,7 @@ async function rpcCall(fn: string, body: unknown, opts: { userId?: string; token
     body: JSON.stringify(body),
   })
   const text = await res.text()
-  let json: unknown = null
+  let json: unknown
   try { json = JSON.parse(text) } catch { json = text }
   return { status: res.status, json }
 }

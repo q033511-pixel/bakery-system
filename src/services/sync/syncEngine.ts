@@ -88,7 +88,7 @@ export async function executeOperation<T = unknown>(
     return { ok: true, offline: false, data }
   } catch (err) {
     // فشل تنفيذ محلي = خطأ بيانات/تحقق يُعرض للمستخدم (لا طابور)
-    throw new Error(extractErrorMessage(err))
+    throw new Error(extractErrorMessage(err), { cause: err })
   }
 }
 

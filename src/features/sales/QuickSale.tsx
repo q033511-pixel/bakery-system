@@ -3,7 +3,7 @@
  * Mobile First: أصناف كأزرار +/-، أسعار تلقائية، حفظ بأوفر خطوات.
  * تعمل أوفلاين بالكامل: الأصناف والعملاء من الكاش المحلي، والحفظ عبر الطابور.
  */
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Plus, Minus, Trash2, Save, ShoppingCart, Banknote, Clock3, Tag } from 'lucide-react'
 import { lookups } from '@/services/lookups'
@@ -64,11 +64,14 @@ export default function QuickSale() {
     [],
   )
 
-  /** إعادة حل أسعار كل السطور غير المعدلة يدوياً (عند تغيير العميل أو القواعد) */
-  useEffect(() => {
-    if (lines.length === 0) return
-    setLines((prev) =>
-      prev.map((l) => {
+  /**
+   * أسعار العرض المشتقة — اشتقاق أثناء الرسم بدل تأثير: كل سطر غير معدّل يدوياً
+   * يُحلّ سعره لحظياً من قواعد العميل الحالية (تغيير العميل أو القواعد أو سعر
+   * الصنف ينعكس فوراً، والتعديل اليدوي محفوظ كما هو). نفس دلالات السلوك السابق.
+   */
+  const displayLines = useMemo<Line[]>(
+    () =>
+      lines.map((l) => {
         if (l.priceEdited) return l
         const product = products.find((p: Product) => p.id === l.product_id)
         if (!product) return l
@@ -81,9 +84,8 @@ export default function QuickSale() {
         })
         return { ...l, unit_price: resolved.price, priceSource: resolved.source }
       }),
-    )
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [customerId, priceRules])
+    [lines, products, customerId, priceRules],
+  )
 
   const activeProducts = useMemo(
     () => products.filter((p: Product) => p.active && p.item_type === 'FINISHED_PRODUCT'),
@@ -100,7 +102,7 @@ export default function QuickSale() {
     return stockHint(warehouseId)
   }, [warehouseId]) ?? {}
 
-  const subtotal = sumMoney(lines.map((l) => lineTotal(l.quantity, l.unit_price)))
+  const subtotal = sumMoney(displayLines.map((l) => lineTotal(l.quantity, l.unit_price)))
   const total = roundMoney(subtotal - (discount ?? 0))
 
   function addProduct(p: Product) {
@@ -150,7 +152,7 @@ export default function QuickSale() {
         customer_id: customerId,
         warehouse_id: wh,
         sale_date: todayISO(),
-        items: lines.map((l) => ({ product_id: l.product_id, quantity: l.quantity, unit_id: l.unit_id, unit_price: l.unit_price })),
+        items: displayLines.map((l) => ({ product_id: l.product_id, quantity: l.quantity, unit_id: l.unit_id, unit_price: l.unit_price })),
         discount: discount ?? 0,
         payment_type: paymentType,
         payment_method: paymentType === 'CASH' ? 'CASH' : null,
@@ -271,9 +273,9 @@ export default function QuickSale() {
       </Card>
 
       {/* السطور */}
-      {lines.length > 0 && (
+      {displayLines.length > 0 && (
         <Card className="mb-3 divide-y divide-stone-100">
-          {lines.map((l, idx) => {
+          {displayLines.map((l, idx) => {
             const stock = stockByProduct[l.product_id]
             const overStock = stock !== undefined && stock !== null && l.quantity > stock
             return (

@@ -21,7 +21,7 @@ import { db } from '@/db/db'
 export default function PinLock() {
   const navigate = useNavigate()
   const business = useAuthStore((s) => s.business)
-  const [bizName, setBizName] = useState<string>('')
+  const [dbBizName, setDbBizName] = useState<string>('')
   const [pin, setPinState] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [shake, setShake] = useState(false)
@@ -31,13 +31,17 @@ export default function PinLock() {
   const [backupSaved, setBackupSaved] = useState(false)
   const [confirmWipe, setConfirmWipe] = useState(false)
 
-  // اسم المخبز من المتجر أو من القاعدة مباشرة (قد لا تكون الجلسة مفتوحة بعد)
+  // اسم المخبز: من المتجر أولاً، وإلا من القاعدة مباشرة (قد لا تكون الجلسة مفتوحة بعد)
+  // — الاشتقاق أثناء الرسم بدل ضبط الحالة داخل تأثير (react-hooks/set-state-in-effect)
+  const bizName = business?.name ?? dbBizName
   useEffect(() => {
-    if (business?.name) { setBizName(business.name); return }
+    if (business?.name) return
+    let alive = true
     void db.businesses.toArray().then((rows) => {
       const name = rows[0]?.name
-      if (typeof name === 'string') setBizName(name)
+      if (alive && typeof name === 'string') setDbBizName(name)
     }).catch(() => undefined)
+    return () => { alive = false }
   }, [business])
 
   // لا رمز مضبوط؟ → تعيين رمز للمرة الأولى (ترحيل) — بعد كل الـhooks
